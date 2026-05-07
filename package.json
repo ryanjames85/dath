@@ -1,0 +1,189 @@
+{
+  "name": "dath-vscode",
+  "displayName": "Dath — Color & Visual Comfort",
+  "description": "Your editor, tuned to your eyes. CVD correction, contrast comfort, rainbow brackets, font controls and profiles — as a layer over any theme.",
+  "version": "0.1.0",
+  "publisher": "RyanConnolly",
+  "license": "LicenseRef-PolyForm-Noncommercial-1.0.0",
+  "icon": "resources/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ryanjames85/dath"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Themes",
+    "Accessibility",
+    "Other"
+  ],
+  "keywords": [
+    "colorblind",
+    "colour blind",
+    "color blind",
+    "deuteranopia",
+    "protanopia",
+    "tritanopia",
+    "accessibility",
+    "visual comfort",
+    "rainbow brackets",
+    "contrast",
+    "dyslexia",
+    "CVD",
+    "color correction",
+    "color filter",
+    "font",
+    "icon"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "dath.openPanel",
+        "title": "Dath: Open Panel"
+      },
+      {
+        "command": "dath.toggle",
+        "title": "Dath: Toggle On/Off"
+      },
+      {
+        "command": "dath.selectProfile",
+        "title": "Dath: Switch Profile"
+      },
+      {
+        "command": "dath.saveProfile",
+        "title": "Dath: Save Current Settings as Profile"
+      },
+      {
+        "command": "dath.openSettings",
+        "title": "Dath: Open Settings"
+      },
+      {
+        "command": "dath.runOnboarding",
+        "title": "Dath: Run Setup Wizard"
+      }
+    ],
+    "configuration": {
+      "title": "Dath",
+      "properties": {
+        "dath.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable or disable Dath's colour corrections."
+        },
+        "dath.cvdMode": {
+          "type": "string",
+          "enum": ["none", "deuteranopia", "protanopia", "tritanopia", "custom1", "custom2", "custom3"],
+          "default": "none",
+          "description": "Correction mode. Select a standard preset or one of your custom-defined palettes."
+        },
+        "dath.cvdSeverity": {
+          "type": "number",
+          "default": 1.0,
+          "minimum": 0.1,
+          "maximum": 1.0,
+          "description": "Correction strength. Ignored for custom palettes."
+        },
+        "dath.contrastMode": {
+          "type": "string",
+          "enum": ["none", "soften", "warm", "cool", "dim"],
+          "default": "none",
+          "enumDescriptions": [
+            "No background adjustment",
+            "Soften pure white to a warm off-white — reduces snow blindness",
+            "Warm the background tone slightly",
+            "Cool the background tone slightly",
+            "Reduce overall brightness"
+          ],
+          "description": "Background and contrast comfort adjustment."
+        },
+        "dath.contrastStrength": {
+          "type": "number",
+          "default": 0.5,
+          "minimum": 0.1,
+          "maximum": 1.0,
+          "description": "Strength of the contrast/background adjustment (0.1–1.0)."
+        },
+        "dath.rainbowBrackets": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable rainbow bracket colouring with CVD-safe palettes."
+        },
+        "dath.bracketShapeHints": {
+          "type": "boolean",
+          "default": false,
+          "description": "Add shape hints (underline) to bracket pairs so they are distinguishable without relying on colour alone."
+        },
+        "dath.fontOverride": {
+          "type": "string",
+          "default": "none",
+          "description": "Override the editor font. Use 'none' to disable, or enter any font name installed on your system. Suggested: OpenDyslexic, Atkinson Hyperlegible, Lexie Readable."
+        },
+        "dath.fontSizeOverride": {
+          "type": "number",
+          "default": 0,
+          "minimum": 0,
+          "maximum": 32,
+          "description": "Override editor font size in px. 0 = use VS Code default."
+        },
+        "dath.lineHeightOverride": {
+          "type": "number",
+          "default": 0,
+          "minimum": 0,
+          "maximum": 3,
+          "description": "Override editor line height. 0 = use VS Code default. Suggested range: 1.4–1.8 for improved readability."
+        },
+        "dath.letterSpacingOverride": {
+          "type": "number",
+          "default": 0,
+          "minimum": 0,
+          "maximum": 5,
+          "description": "Override editor letter spacing in pixels. 0 = use VS Code default."
+        },
+        "dath.warmthBias": {
+          "type": "number",
+          "default": 0,
+          "minimum": -1.0,
+          "maximum": 1.0,
+          "description": "Hue tint applied on top of all other corrections. Positive = warm, negative = cool. 0 = neutral."
+        },
+        "dath.activeProfile": {
+          "type": "string",
+          "default": "",
+          "description": "Name of the currently active saved profile. Managed by Dath — avoid editing directly."
+        },
+        "dath.customBracketPalette": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": ["#FFD700", "#DA70D6", "#179FFF", "#FF6B6B", "#98FB98", "#FFB347"],
+          "description": "Legacy custom bracket palette. Prefer using Custom Palettes below."
+        },
+        "dath.customPalettes": {
+          "type": "object",
+          "default": {},
+          "description": "Storage for your custom defined color mappings (Custom 1, 2, 3)."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "eslint": "^8.0.0",
+    "typescript": "^5.3.0",
+    "@vscode/vsce": "^2.22.0"
+  }
+}
