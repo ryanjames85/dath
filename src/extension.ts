@@ -3,7 +3,7 @@
  * Dath — Color & Visual Comfort for VS Code
  * Your editor, tuned to your eyes.
  *
- * MIT Licence — Ryan James, Dublin, Ireland
+ * PolyForm Noncommercial 1.0.0 — Ryan James, Dublin, Ireland
  */
 
 import * as vscode from 'vscode';
@@ -91,7 +91,6 @@ async function applyCurrentConfig(): Promise<void> {
   const contrastStrength = cfg.get<number>('contrastStrength') ?? 0.5;
   const rainbowBrackets = cfg.get<boolean>('rainbowBrackets') ?? false;
   const bracketShapeHints = cfg.get<boolean>('bracketShapeHints') ?? false;
-  const customBracketPalette = cfg.get<string[]>('customBracketPalette');
   const customPalettes = cfg.get<Record<string, any>>('customPalettes');
   const warmthBias = cfg.get<number>('warmthBias') ?? 0;
   const fontOverride = cfg.get<string>('fontOverride') ?? 'none';
@@ -107,7 +106,7 @@ async function applyCurrentConfig(): Promise<void> {
     return;
   }
 
-  await engine.apply(cvdMode, cvdSeverity, contrastMode, contrastStrength, rainbowBrackets, bracketShapeHints, customBracketPalette, customPalettes, warmthBias);
+  await engine.apply(cvdMode, cvdSeverity, contrastMode, contrastStrength, rainbowBrackets, bracketShapeHints, customPalettes, warmthBias);
   await engine.applyFontSettings(fontOverride, fontSize, lineHeight, letterSpacing);
   statusBar.update(true, activeProfile, cvdMode);
 }

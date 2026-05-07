@@ -1,4 +1,4 @@
-// CVD and Visual Comfort validation — run with: node test-cvd.js
+// CVD and Visual Comfort validation — run with: node scripts/test-cvd.js
 const { correctColour, adjustContrast, adjustWarmth, BRACKET_PALETTES } = require('./out/cvd');
 
 // ── CVD Correction Tests ─────────────────────────────────────────────────────

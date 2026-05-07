@@ -105,7 +105,7 @@ export class DathPanel {
           const sectionKeys: Record<string, string[]> = {
             cvd:      ['cvdMode', 'cvdSeverity'],
             comfort:  ['contrastMode', 'contrastStrength', 'warmthBias'],
-            brackets: ['rainbowBrackets', 'bracketShapeHints', 'customBracketPalette'],
+            brackets: ['rainbowBrackets', 'bracketShapeHints'],
             font:     ['fontOverride', 'fontSizeOverride', 'lineHeightOverride', 'letterSpacingOverride'],
           };
           for (const key of (sectionKeys[msg.section] ?? [])) {
@@ -118,7 +118,7 @@ export class DathPanel {
           const target = vscode.ConfigurationTarget.Global;
           for (const key of [
             'cvdMode', 'cvdSeverity', 'contrastMode', 'contrastStrength', 'warmthBias',
-            'rainbowBrackets', 'bracketShapeHints', 'customBracketPalette', 'customPalettes',
+            'rainbowBrackets', 'bracketShapeHints', 'customPalettes',
             'fontOverride', 'fontSizeOverride', 'lineHeightOverride', 'letterSpacingOverride'
           ]) {
             await cfg.update(key, undefined, target);
@@ -139,7 +139,6 @@ export class DathPanel {
     const warmthBias = cfg.get<number>('warmthBias') ?? 0;
     const rainbowBrackets = cfg.get<boolean>('rainbowBrackets') ?? false;
     const bracketShapeHints = cfg.get<boolean>('bracketShapeHints') ?? false;
-    const customBracketPalette = cfg.get<string[]>('customBracketPalette') ?? BRACKET_PALETTES.default;
     const customPalettes = cfg.get<Record<string, any>>('customPalettes') ?? {};
     const fontOverride = cfg.get<string>('fontOverride') ?? 'none';
     const fontSizeOverride = cfg.get<number>('fontSizeOverride') ?? 0;
@@ -181,7 +180,7 @@ export class DathPanel {
       bracketPalette = activePalette.brackets;
     } else {
       bracketPalette = (enabled && rainbowBrackets)
-        ? (cvdMode === 'custom' ? customBracketPalette : (BRACKET_PALETTES[cvdMode] ?? BRACKET_PALETTES.default))
+        ? (BRACKET_PALETTES[cvdMode] ?? BRACKET_PALETTES.default)
         : BRACKET_PALETTES.default;
     }
 
@@ -198,7 +197,6 @@ export class DathPanel {
       profiles: profiles.map(p => p.name),
       samples: corrected,
       bracketPalette,
-      customBracketPalette,
       customPalettes,
       rainbowBrackets,
       bracketShapeHints,
@@ -230,7 +228,6 @@ interface RenderData {
   profiles: string[];
   samples: Array<{ label: string; hex: string; corrected: string; role: string }>;
   bracketPalette: string[];
-  customBracketPalette: string[];
   customPalettes: Record<string, any>;
   rainbowBrackets: boolean;
   bracketShapeHints: boolean;

@@ -155,12 +155,6 @@
           "default": "",
           "description": "Name of the currently active saved profile. Managed by Dath — avoid editing directly."
         },
-        "dath.customBracketPalette": {
-          "type": "array",
-          "items": { "type": "string" },
-          "default": ["#FFD700", "#DA70D6", "#179FFF", "#FF6B6B", "#98FB98", "#FFB347"],
-          "description": "Legacy custom bracket palette. Prefer using Custom Palettes below."
-        },
         "dath.customPalettes": {
           "type": "object",
           "default": {},

@@ -259,7 +259,6 @@ export class ThemeEngine {
     contrastStrength: number,
     rainbowBrackets: boolean,
     bracketShapeHints: boolean,
-    customBracketPalette: string[] | undefined,
     customPalettes: Record<string, any> | undefined,
     warmthBias: number = 0
   ): Promise<void> {
@@ -358,9 +357,7 @@ export class ThemeEngine {
       if (activePalette && activePalette.brackets) {
         palette = activePalette.brackets;
       } else {
-        palette = cvdMode === 'custom' && customBracketPalette && customBracketPalette.length >= 6
-          ? customBracketPalette
-          : (BRACKET_PALETTES[cvdMode] ?? BRACKET_PALETTES.default);
+        palette = BRACKET_PALETTES[cvdMode] ?? BRACKET_PALETTES.default;
       }
       
       palette.forEach((colour, i) => {

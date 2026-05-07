@@ -1,0 +1,14 @@
+.vscode/**
+.github/**
+.claude/**
+docs/**
+scripts/**
+src/**
+test-cvd.js
+resources/dath-logo.svg
+node_modules/**
+out/test/**
+tsconfig.json
+.eslintrc.json
+.gitignore
+*.map
