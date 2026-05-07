@@ -5,7 +5,7 @@
   "version": "0.1.0",
   "publisher": "RyanConnolly",
   "license": "LicenseRef-PolyForm-Noncommercial-1.0.0",
-  "icon": "resources/icon.png",
+  "icon": "resources/dath-logo.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/ryanjames85/dath"
@@ -15,7 +15,6 @@
   },
   "categories": [
     "Themes",
-    "Accessibility",
     "Other"
   ],
   "keywords": [

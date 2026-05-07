@@ -173,7 +173,3 @@ npm run package  # build .vsix for local install or publishing
 ## Licence
 
 [PolyForm Noncommercial 1.0.0](LICENSE) — free to use and modify for non-commercial purposes.
-
----
-
-*Built in Dublin, Ireland. Irish word, honest tool.*
