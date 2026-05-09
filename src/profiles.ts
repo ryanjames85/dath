@@ -14,6 +14,7 @@ export interface DathProfile {
   contrastStrength: number;
   rainbowBrackets: boolean;
   bracketShapeHints: boolean;
+  warmthBias: number;
   fontOverride: string;
   fontSizeOverride: number;
   lineHeightOverride: number;
@@ -47,6 +48,7 @@ export function profileFromCurrentConfig(): DathProfile {
     contrastStrength: cfg.get('contrastStrength') ?? 0.5,
     rainbowBrackets: cfg.get('rainbowBrackets') ?? false,
     bracketShapeHints: cfg.get('bracketShapeHints') ?? false,
+    warmthBias: cfg.get('warmthBias') ?? 0,
     fontOverride: cfg.get('fontOverride') ?? 'none',
     fontSizeOverride: cfg.get('fontSizeOverride') ?? 0,
     lineHeightOverride: cfg.get('lineHeightOverride') ?? 0,
@@ -63,6 +65,7 @@ export async function applyProfile(profile: DathProfile): Promise<void> {
   await cfg.update('contrastStrength', profile.contrastStrength, target);
   await cfg.update('rainbowBrackets', profile.rainbowBrackets, target);
   await cfg.update('bracketShapeHints', profile.bracketShapeHints, target);
+  await cfg.update('warmthBias', profile.warmthBias, target);
   await cfg.update('fontOverride', profile.fontOverride, target);
   await cfg.update('fontSizeOverride', profile.fontSizeOverride, target);
   await cfg.update('lineHeightOverride', profile.lineHeightOverride, target);
@@ -79,6 +82,7 @@ export const BUILT_IN_PROFILES: Omit<DathProfile, 'name'>[] = [
     contrastStrength: 0.5,
     rainbowBrackets: true,
     bracketShapeHints: true,
+    warmthBias: 0,
     fontOverride: 'none',
     fontSizeOverride: 0,
     lineHeightOverride: 0,
@@ -91,6 +95,7 @@ export const BUILT_IN_PROFILES: Omit<DathProfile, 'name'>[] = [
     contrastStrength: 0.5,
     rainbowBrackets: true,
     bracketShapeHints: true,
+    warmthBias: 0,
     fontOverride: 'none',
     fontSizeOverride: 0,
     lineHeightOverride: 0,
@@ -103,6 +108,7 @@ export const BUILT_IN_PROFILES: Omit<DathProfile, 'name'>[] = [
     contrastStrength: 0.7,
     rainbowBrackets: false,
     bracketShapeHints: false,
+    warmthBias: 0,
     fontOverride: 'Atkinson Hyperlegible',
     fontSizeOverride: 0,
     lineHeightOverride: 1.6,

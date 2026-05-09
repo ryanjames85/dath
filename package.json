@@ -64,6 +64,21 @@
       {
         "command": "dath.runOnboarding",
         "title": "Dath: Run Setup Wizard"
+      },
+      {
+        "command": "dath.exportProfiles",
+        "title": "Dath: Export Profiles to Clipboard"
+      },
+      {
+        "command": "dath.importProfiles",
+        "title": "Dath: Import Profiles from Clipboard"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "dath.openPanel",
+        "key": "ctrl+alt+d",
+        "mac": "cmd+alt+d"
       }
     ],
     "configuration": {
@@ -76,7 +91,7 @@
         },
         "dath.cvdMode": {
           "type": "string",
-          "enum": ["none", "deuteranopia", "protanopia", "tritanopia", "custom1", "custom2", "custom3"],
+          "enum": ["none", "deuteranopia", "protanopia", "tritanopia", "achromatopsia", "custom1", "custom2", "custom3"],
           "default": "none",
           "description": "Correction mode. Select a standard preset or one of your custom-defined palettes."
         },
@@ -142,6 +157,11 @@
           "minimum": 0,
           "maximum": 5,
           "description": "Override editor letter spacing in pixels. 0 = use VS Code default."
+        },
+        "dath.simulationMode": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show how your theme looks to someone with the selected CVD type, instead of correcting it. Useful for theme authors and for demonstrating CVD to others."
         },
         "dath.warmthBias": {
           "type": "number",

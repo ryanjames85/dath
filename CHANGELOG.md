@@ -1,3 +1,4 @@
+<!-- markdownlint-disable MD024 -->
 # Changelog
 
 All notable changes to Dath will be documented here.
@@ -78,4 +79,21 @@ Initial release.
 
 ## [Unreleased]
 
-Nothing yet.
+### Added
+
+#### CVD Colour Correction
+
+- Achromatopsia mode — rod monochromacy (complete colour blindness). Simulation collapses all channels to luminance; correction re-encodes colour differences as brightness contrast. Luminance-contrast bracket palette included.
+- CVD simulation mode (`dath.simulationMode`) — instead of correcting your theme, shows how it looks to someone with the selected CVD type. Toggle in the panel CVD section. Useful for theme authors and for demonstrating CVD to colleagues.
+
+#### Profiles
+
+- Export profiles to clipboard (`Dath: Export Profiles to Clipboard`) — serialises all saved profiles as JSON
+- Import profiles from clipboard (`Dath: Import Profiles from Clipboard`) — merges profiles from clipboard JSON, overwriting any with matching names
+- Export and import buttons added directly to the panel Profiles section
+- Fixed: `warmthBias` was missing from saved profiles — it is now captured and restored correctly
+
+#### Core
+
+- Keyboard shortcut `Ctrl+Alt+D` / `Cmd+Alt+D` to open the panel
+- Status bar degraded indicator — shows a warning icon when the theme file cannot be read and Dath is running in manual fallback mode

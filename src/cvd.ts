@@ -7,7 +7,7 @@
  * Fidaner et al. daltonization approach.
  */
 
-export type CvdMode = 'none' | 'deuteranopia' | 'protanopia' | 'tritanopia' | 'custom' | 'custom1' | 'custom2' | 'custom3';
+export type CvdMode = 'none' | 'deuteranopia' | 'protanopia' | 'tritanopia' | 'achromatopsia' | 'custom' | 'custom1' | 'custom2' | 'custom3';
 
 interface RGB {
   r: number; // 0–255
@@ -59,6 +59,11 @@ const SIMULATION: Record<CvdMode, (l: number, m: number, s: number) => [number, 
   protanopia: (_l, m, s) => [0.55842 * m - 0.03487 * s, m, s],
   // Tritanopia: S cone missing — derive S from L and M
   tritanopia: (l, m, _s) => [l, m, -0.01224 * l + 0.05756 * m],
+  // Achromatopsia: rod monochromacy — no cone function, only luminance perceived
+  achromatopsia: (l, m, s) => {
+    const lum = 0.2126 * l + 0.7152 * m + 0.0722 * s;
+    return [lum, lum, lum];
+  },
   custom: (l, m, s) => [l, m, s],
   custom1: (l, m, s) => [l, m, s],
   custom2: (l, m, s) => [l, m, s],
@@ -79,6 +84,11 @@ const ERROR_SHIFT: Record<CvdMode, (errR: number, errG: number, errB: number) =>
   protanopia: (r, _g, _b) => ({ r: 0, g: 0, b: 0.7 * r }),
   // Tritanopia (S/blue cone missing): encode lost blue info into green — tritanopes see green well
   tritanopia:   (_r, _g, b) => ({ r: 0, g: 0.7 * b, b: 0 }),
+  // Achromatopsia: re-encode colour error as luminance contrast boost
+  achromatopsia: (errR, errG, errB) => {
+    const lum = 0.299 * errR + 0.587 * errG + 0.114 * errB;
+    return { r: lum * 0.6, g: lum * 0.6, b: lum * 0.6 };
+  },
   custom:       (r, g, b) => ({ r, g, b }),
   custom1:      (r, g, b) => ({ r, g, b }),
   custom2:      (r, g, b) => ({ r, g, b }),
@@ -114,6 +124,16 @@ export function correctColour(hex: string, mode: CvdMode, severity: number = 1.0
   };
 
   return rgbToHex(corrected);
+}
+
+export function simulateColour(hex: string, mode: CvdMode): string {
+  if (mode === 'none' || mode.startsWith('custom')) return hex;
+  const rgb = hexToRgb(hex);
+  if (!rgb) return hex;
+  const { r, g, b } = rgb;
+  const [l, m, s] = rgbToLms(r, g, b);
+  const [ls, ms, ss] = SIMULATION[mode](l, m, s);
+  return rgbToHex(lmsToRgb(ls, ms, ss));
 }
 
 // ── Contrast comfort ─────────────────────────────────────────────────────────
@@ -189,6 +209,8 @@ export const BRACKET_PALETTES: Record<CvdMode | 'default', string[]> = {
   protanopia:   ['#FFD700', '#0072B2', '#56B4E9', '#F0E442', '#CC79A7', '#009E73'],
   tritanopia:   ['#E69F00', '#D55E00', '#CC79A7', '#F0E442', '#009E73', '#0072B2'],
   none:         ['#FFD700', '#DA70D6', '#179FFF', '#FF6B6B', '#98FB98', '#FFB347'],
+  // Achromatopsia: distinct luminance levels rather than hue differences
+  achromatopsia: ['#FFFFFF', '#BBBBBB', '#777777', '#DDDDDD', '#999999', '#444444'],
   custom:       ['#FFD700', '#DA70D6', '#179FFF', '#FF6B6B', '#98FB98', '#FFB347'],
   custom1:      ['#FFD700', '#DA70D6', '#179FFF', '#FF6B6B', '#98FB98', '#FFB347'],
   custom2:      ['#FFD700', '#DA70D6', '#179FFF', '#FF6B6B', '#98FB98', '#FFB347'],

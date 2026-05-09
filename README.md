@@ -33,8 +33,11 @@ Applies LMS daltonization (Brettel, Viénot & Mollon, 1997) to your active theme
 | Deuteranopia | M (green) | ~6% of males |
 | Protanopia | L (red) | ~2% of males |
 | Tritanopia | S (blue) | ~0.01% of population |
+| Achromatopsia | All cones | Rod monochromacy — luminance only |
 
 A **severity slider** (0.1–1.0) lets you dial in the correction strength — 1.0 for complete CVD, lower for partial deficiency.
+
+**Simulate mode** — instead of correcting, show what your current theme looks like *to* someone with the selected CVD type. Useful for theme authors and for demonstrating CVD to colleagues.
 
 **Custom palette slots** (Custom 1, 2, 3) let you define your own per-role colour overrides directly in the panel using colour pickers.
 
@@ -82,7 +85,9 @@ Click the status bar item to open the Dath panel — a live interactive control 
 - Global reset restores all Dath settings at once
 - Live colour correction preview shows before/after swatches for representative theme colours
 - Bracket palette preview updates in real time
-- Profile management — apply or save profiles without leaving the panel
+- Profile management — apply, save, export, and import profiles without leaving the panel
+- Simulate toggle — preview what your theme looks like to a CVD user
+- Status bar shows a warning indicator if the theme file could not be read
 
 ---
 
@@ -102,7 +107,7 @@ Dath manages 185 workbench colour tokens spanning the editor, sidebar, tabs, ter
 1. Install from the VS Code Marketplace
 2. The setup wizard runs automatically on first install — choose your CVD type, contrast preference, and bracket options
 3. Click the `$(eye) Dath` item in the status bar to open the panel at any time
-4. Or: **Ctrl/Cmd+Shift+P** → `Dath: Open Panel`
+4. Or: **Ctrl+Alt+D** / **Cmd+Alt+D** — or **Ctrl/Cmd+Shift+P** → `Dath: Open Panel`
 
 ---
 
@@ -116,6 +121,8 @@ Dath manages 185 workbench colour tokens spanning the editor, sidebar, tabs, ter
 | `Dath: Save Current Settings as Profile` | Save current config as a named profile |
 | `Dath: Open Settings` | Jump to Dath settings in the VS Code settings UI |
 | `Dath: Run Setup Wizard` | Run the onboarding wizard again |
+| `Dath: Export Profiles to Clipboard` | Copy all saved profiles as JSON |
+| `Dath: Import Profiles from Clipboard` | Import profiles from clipboard JSON |
 
 ---
 
@@ -124,8 +131,9 @@ Dath manages 185 workbench colour tokens spanning the editor, sidebar, tabs, ter
 | Setting | Default | Description |
 | --- | --- | --- |
 | `dath.enabled` | `true` | Enable or disable all corrections |
-| `dath.cvdMode` | `none` | CVD correction: `none` · `deuteranopia` · `protanopia` · `tritanopia` · `custom1` · `custom2` · `custom3` |
-| `dath.cvdSeverity` | `1.0` | Correction strength 0.1–1.0 (ignored for custom modes) |
+| `dath.cvdMode` | `none` | CVD correction: `none` · `deuteranopia` · `protanopia` · `tritanopia` · `achromatopsia` · `custom1` · `custom2` · `custom3` |
+| `dath.cvdSeverity` | `1.0` | Correction strength 0.1–1.0 (ignored for custom and achromatopsia modes) |
+| `dath.simulationMode` | `false` | Show how the theme looks to a CVD user rather than correcting it |
 | `dath.contrastMode` | `none` | Background adjustment: `none` · `soften` · `warm` · `cool` · `dim` |
 | `dath.contrastStrength` | `0.5` | Contrast adjustment strength 0.1–1.0 |
 | `dath.warmthBias` | `0` | Hue tint: positive = warm, negative = cool, 0 = neutral |

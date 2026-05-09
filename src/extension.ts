@@ -37,7 +37,9 @@ export async function activate(ctx: vscode.ExtensionContext): Promise<void> {
     vscode.commands.registerCommand('dath.openSettings', () =>
       vscode.commands.executeCommand('workbench.action.openSettings', 'dath')
     ),
-    vscode.commands.registerCommand('dath.runOnboarding', () => handleOnboarding(ctx))
+    vscode.commands.registerCommand('dath.runOnboarding', () => handleOnboarding(ctx)),
+    vscode.commands.registerCommand('dath.exportProfiles', () => handleExportProfiles(ctx)),
+    vscode.commands.registerCommand('dath.importProfiles', () => handleImportProfiles(ctx))
   );
 
   // Seed built-in profiles on first run
@@ -93,6 +95,7 @@ async function applyCurrentConfig(): Promise<void> {
   const bracketShapeHints = cfg.get<boolean>('bracketShapeHints') ?? false;
   const customPalettes = cfg.get<Record<string, any>>('customPalettes');
   const warmthBias = cfg.get<number>('warmthBias') ?? 0;
+  const simulationMode = cfg.get<boolean>('simulationMode') ?? false;
   const fontOverride = cfg.get<string>('fontOverride') ?? 'none';
   const fontSize = cfg.get<number>('fontSizeOverride') ?? 0;
   const lineHeight = cfg.get<number>('lineHeightOverride') ?? 0;
@@ -106,9 +109,9 @@ async function applyCurrentConfig(): Promise<void> {
     return;
   }
 
-  await engine.apply(cvdMode, cvdSeverity, contrastMode, contrastStrength, rainbowBrackets, bracketShapeHints, customPalettes, warmthBias);
+  await engine.apply(cvdMode, cvdSeverity, contrastMode, contrastStrength, rainbowBrackets, bracketShapeHints, customPalettes, warmthBias, simulationMode);
   await engine.applyFontSettings(fontOverride, fontSize, lineHeight, letterSpacing);
-  statusBar.update(true, activeProfile, cvdMode);
+  statusBar.update(true, activeProfile, cvdMode, engine.degraded);
 }
 
 // ── Command handlers ─────────────────────────────────────────────────────────
@@ -199,7 +202,8 @@ async function handleOnboarding(ctx: vscode.ExtensionContext): Promise<void> {
     { label: 'None', description: 'I do not have colour vision deficiency', value: 'none' },
     { label: 'Deuteranopia', description: 'Red-green (green weak) — most common', value: 'deuteranopia' },
     { label: 'Protanopia', description: 'Red-green (red weak)', value: 'protanopia' },
-    { label: 'Tritanopia', description: 'Blue-yellow', value: 'tritanopia' }
+    { label: 'Tritanopia', description: 'Blue-yellow', value: 'tritanopia' },
+    { label: 'Achromatopsia', description: 'Complete colour blindness — luminance only', value: 'achromatopsia' }
   ], { placeHolder: 'Do you have colour vision deficiency?' });
   if (!cvdPick) return;
   await cfg.update('cvdMode', cvdPick.value, target);
@@ -235,6 +239,47 @@ async function handleOnboarding(ctx: vscode.ExtensionContext): Promise<void> {
 
   await ctx.globalState.update('dath.onboarded', true);
   vscode.window.showInformationMessage('Dath is configured. Run "Dath: Save Current Settings as Profile" to save this as a profile.');
+}
+
+async function handleExportProfiles(ctx: vscode.ExtensionContext): Promise<void> {
+  const profiles = getProfiles(ctx);
+  if (profiles.length === 0) {
+    vscode.window.showInformationMessage('No saved profiles to export.');
+    return;
+  }
+  await vscode.env.clipboard.writeText(JSON.stringify(profiles, null, 2));
+  vscode.window.showInformationMessage(`Dath: ${profiles.length} profile(s) copied to clipboard as JSON.`);
+}
+
+async function handleImportProfiles(ctx: vscode.ExtensionContext): Promise<void> {
+  const text = await vscode.env.clipboard.readText();
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    vscode.window.showErrorMessage('Dath: Clipboard does not contain valid JSON. Copy exported profiles first.');
+    return;
+  }
+  if (!Array.isArray(parsed)) {
+    vscode.window.showErrorMessage('Dath: Expected an array of profiles. Copy exported profiles first.');
+    return;
+  }
+  const valid = parsed.filter((p): p is { name: string } =>
+    typeof p === 'object' && p !== null && typeof (p as any).name === 'string'
+  );
+  if (valid.length === 0) {
+    vscode.window.showErrorMessage('Dath: No valid profiles found in clipboard.');
+    return;
+  }
+  const confirm = await vscode.window.showInformationMessage(
+    `Import ${valid.length} profile(s)? Existing profiles with the same name will be overwritten.`,
+    'Import', 'Cancel'
+  );
+  if (confirm !== 'Import') return;
+  for (const p of valid) {
+    await saveProfile(ctx, p as any);
+  }
+  vscode.window.showInformationMessage(`Dath: ${valid.length} profile(s) imported.`);
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────

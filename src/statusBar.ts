@@ -18,7 +18,7 @@ export class DathStatusBar {
     this.item.show();
   }
 
-  update(enabled: boolean, profileName?: string, cvdMode?: string): void {
+  update(enabled: boolean, profileName?: string, cvdMode?: string, degraded?: boolean): void {
     if (!enabled) {
       this.item.text = '$(eye-closed) Dath';
       this.item.tooltip = 'Dath is disabled — click to enable';
@@ -26,9 +26,16 @@ export class DathStatusBar {
       return;
     }
 
+    if (degraded) {
+      this.item.text = '$(eye) Dath $(warning)';
+      this.item.tooltip = 'Dath active (degraded — theme file unreadable, colours corrected manually)\nClick to open panel';
+      this.item.color = new vscode.ThemeColor('statusBarItem.warningForeground');
+      return;
+    }
+
     const label = profileName ? profileName : cvdMode && cvdMode !== 'none' ? cvdMode : 'on';
     this.item.text = `$(eye) Dath: ${label}`;
-    this.item.tooltip = `Dath active${profileName ? ` — profile: ${profileName}` : ''}\nClick to toggle · Run "Dath: Switch Profile" to change`;
+    this.item.tooltip = `Dath active${profileName ? ` — profile: ${profileName}` : ''}\nClick to open panel · "Dath: Switch Profile" to change`;
     this.item.color = undefined;
   }
 

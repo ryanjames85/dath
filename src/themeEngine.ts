@@ -9,7 +9,7 @@
  */
 
 import * as vscode from 'vscode';
-import { correctColour, adjustContrast, adjustWarmth, isHex, BRACKET_PALETTES } from './cvd';
+import { correctColour, simulateColour, adjustContrast, adjustWarmth, isHex, BRACKET_PALETTES } from './cvd';
 import { readActiveTheme, pickColourManually } from './themeReader';
 import type { ThemeColours } from './themeReader';
 import type { CvdMode, ContrastMode } from './cvd';
@@ -252,6 +252,9 @@ const MANAGED_TOKENS: string[] = [
 ];
 
 export class ThemeEngine {
+  private _degraded = false;
+  get degraded(): boolean { return this._degraded; }
+
   async apply(
     cvdMode: CvdMode,
     cvdSeverity: number,
@@ -260,8 +263,10 @@ export class ThemeEngine {
     rainbowBrackets: boolean,
     bracketShapeHints: boolean,
     customPalettes: Record<string, any> | undefined,
-    warmthBias: number = 0
+    warmthBias: number = 0,
+    simulationMode: boolean = false
   ): Promise<void> {
+    this._degraded = false;
     const workbenchConfig = vscode.workspace.getConfiguration();
     const userOverrides: Record<string, string> =
       workbenchConfig.get('workbench.colorCustomizations') ?? {};
@@ -300,7 +305,9 @@ export class ThemeEngine {
       // But we can apply the base algorithm if not explicitly overridden.
 
       if (cvdMode !== 'none' && !cvdMode.startsWith('custom')) {
-        corrected = correctColour(corrected, cvdMode, cvdSeverity);
+        corrected = simulationMode
+          ? simulateColour(corrected, cvdMode)
+          : correctColour(corrected, cvdMode, cvdSeverity);
       }
       
       if (contrastMode !== 'none') {
@@ -340,7 +347,9 @@ export class ThemeEngine {
       if (activePalette && role && activePalette[role]) {
         corrected = activePalette[role];
       } else if (cvdMode !== 'none' && !cvdMode.startsWith('custom')) {
-        corrected = correctColour(corrected, cvdMode, cvdSeverity);
+        corrected = simulationMode
+          ? simulateColour(corrected, cvdMode)
+          : correctColour(corrected, cvdMode, cvdSeverity);
       }
 
       if (warmthBias !== 0) {
@@ -410,7 +419,6 @@ export class ThemeEngine {
     }
   }
 
-  /** Called when theme file can't be read — let user pick individual colours */
   private async offerManualFallback(
     cvdMode: CvdMode,
     cvdSeverity: number,
@@ -418,6 +426,7 @@ export class ThemeEngine {
     contrastStrength: number,
     warmthBias: number = 0
   ): Promise<void> {
+    this._degraded = true;
     const action = await vscode.window.showWarningMessage(
       "Dath couldn't read your theme file automatically. You can manually pick colours to correct.",
       'Pick a Colour',

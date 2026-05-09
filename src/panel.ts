@@ -77,6 +77,13 @@ export class DathPanel {
         case 'runOnboarding':
           vscode.commands.executeCommand('dath.runOnboarding');
           break;
+        case 'exportProfiles':
+          vscode.commands.executeCommand('dath.exportProfiles');
+          break;
+        case 'importProfiles':
+          await vscode.commands.executeCommand('dath.importProfiles');
+          this.render();
+          break;
         case 'updateSetting': {
           const cfg = vscode.workspace.getConfiguration();
           await cfg.update(msg.key, msg.value, vscode.ConfigurationTarget.Global);
@@ -103,7 +110,7 @@ export class DathPanel {
           const cfg = vscode.workspace.getConfiguration('dath');
           const target = vscode.ConfigurationTarget.Global;
           const sectionKeys: Record<string, string[]> = {
-            cvd:      ['cvdMode', 'cvdSeverity'],
+            cvd:      ['cvdMode', 'cvdSeverity', 'simulationMode'],
             comfort:  ['contrastMode', 'contrastStrength', 'warmthBias'],
             brackets: ['rainbowBrackets', 'bracketShapeHints'],
             font:     ['fontOverride', 'fontSizeOverride', 'lineHeightOverride', 'letterSpacingOverride'],
@@ -117,7 +124,7 @@ export class DathPanel {
           const cfg = vscode.workspace.getConfiguration('dath');
           const target = vscode.ConfigurationTarget.Global;
           for (const key of [
-            'cvdMode', 'cvdSeverity', 'contrastMode', 'contrastStrength', 'warmthBias',
+            'cvdMode', 'cvdSeverity', 'simulationMode', 'contrastMode', 'contrastStrength', 'warmthBias',
             'rainbowBrackets', 'bracketShapeHints', 'customPalettes',
             'fontOverride', 'fontSizeOverride', 'lineHeightOverride', 'letterSpacingOverride'
           ]) {
@@ -140,6 +147,7 @@ export class DathPanel {
     const rainbowBrackets = cfg.get<boolean>('rainbowBrackets') ?? false;
     const bracketShapeHints = cfg.get<boolean>('bracketShapeHints') ?? false;
     const customPalettes = cfg.get<Record<string, any>>('customPalettes') ?? {};
+    const simulationMode = cfg.get<boolean>('simulationMode') ?? false;
     const fontOverride = cfg.get<string>('fontOverride') ?? 'none';
     const fontSizeOverride = cfg.get<number>('fontSizeOverride') ?? 0;
     const lineHeightOverride = cfg.get<number>('lineHeightOverride') ?? 0;
@@ -198,6 +206,7 @@ export class DathPanel {
       samples: corrected,
       bracketPalette,
       customPalettes,
+      simulationMode,
       rainbowBrackets,
       bracketShapeHints,
       fontOverride,
@@ -229,6 +238,7 @@ interface RenderData {
   samples: Array<{ label: string; hex: string; corrected: string; role: string }>;
   bracketPalette: string[];
   customPalettes: Record<string, any>;
+  simulationMode: boolean;
   rainbowBrackets: boolean;
   bracketShapeHints: boolean;
   fontOverride: string;
@@ -296,7 +306,7 @@ function buildHtml(d: RenderData): string {
     : `<p class="muted">No saved profiles yet.</p>`;
 
   // Button group helpers
-  const cvdModes = ['none', 'deuteranopia', 'protanopia', 'tritanopia', 'custom1', 'custom2', 'custom3'];
+  const cvdModes = ['none', 'deuteranopia', 'protanopia', 'tritanopia', 'achromatopsia', 'custom1', 'custom2', 'custom3'];
   const contrastModes = ['none', 'soften', 'dim', 'warm', 'cool'];
 
   const cvdButtons = cvdModes.map(m =>
@@ -342,7 +352,7 @@ function buildHtml(d: RenderData): string {
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
-    font-family: var(--vscode-font-family);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
     font-size: var(--vscode-font-size);
     color: var(--fg);
     background: var(--bg);
@@ -482,7 +492,7 @@ function buildHtml(d: RenderData): string {
     margin-bottom: 8px;
   }
   .slider-label { font-size: 11px; color: var(--muted); font-weight: 600; }
-  .slider-val { font-size: 11px; font-family: monospace; color: var(--accent); font-weight: 700; }
+  .slider-val { font-size: 11px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; color: var(--accent); font-weight: 700; }
   
   .slider-container { display: flex; align-items: center; gap: 12px; }
   input[type=range] {
@@ -524,7 +534,7 @@ function buildHtml(d: RenderData): string {
   }
   .swatch-hex {
     font-size: 9px;
-    font-family: monospace;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
     letter-spacing: 0.2px;
     font-weight: 700;
     opacity: 0.85;
@@ -604,6 +614,17 @@ function buildHtml(d: RenderData): string {
     box-shadow: 0 2px 8px rgba(0,0,0,0.2);
   }
   .btn-primary:hover { opacity: 0.9; }
+  .btn-secondary {
+    flex: 1;
+    padding: 7px 12px;
+    border-radius: 6px;
+    border: none;
+    background: var(--btn-sec-bg);
+    color: var(--btn-sec-fg);
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .btn-secondary:hover { opacity: 0.9; }
 
   .disabled-notice {
     font-size: 12px;
@@ -663,6 +684,14 @@ ${!d.enabled ? `<div class="disabled-notice">Dath is currently paused. Enable it
     </div>
   </div>
   ` : `<p class="muted">Palette Studio: Use the pickers in the sections below to tune your custom set.</p>`}
+  ${d.cvdMode !== 'none' && !isCustomMode ? `
+  <div class="slider-row" style="margin-top:8px">
+    <div class="slider-head">
+      <span class="slider-label">Simulate only</span>
+      <span class="muted" style="font-size:11px">Show how this theme looks to a ${d.cvdMode} user</span>
+    </div>
+    ${togglePill('dath.simulationMode', d.simulationMode)}
+  </div>` : ''}
 </div>
 
 <!-- Comfort Section -->
@@ -723,7 +752,7 @@ ${!d.enabled ? `<div class="disabled-notice">Dath is currently paused. Enable it
 
   <div class="bracket-row" style="margin-top:12px">
     <div class="bracket-swatches">${bracketSwatches}</div>
-    <span style="font-family:monospace; font-size:16px; margin-left:12px; opacity:0.8">
+    <span style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif; font-size:16px; margin-left:12px; opacity:0.8">
       ${d.bracketPalette.slice(0,3).map(c => `<span style="color:${c}">{</span>`).join('')}
       <span style="opacity:0.3">...</span>
       ${d.bracketPalette.slice(0,3).reverse().map(c => `<span style="color:${c}">}</span>`).join('')}
@@ -806,6 +835,10 @@ ${!d.enabled ? `<div class="disabled-notice">Dath is currently paused. Enable it
     ${profileItems}
   </div>
   <button class="btn-primary" onclick="send('saveProfile')">+ Save Current Configuration</button>
+  <div style="display:flex;gap:8px;margin-top:8px">
+    <button class="btn-secondary" onclick="send('exportProfiles')">Export to Clipboard</button>
+    <button class="btn-secondary" onclick="send('importProfiles')">Import from Clipboard</button>
+  </div>
 </div>
 
 <script>
