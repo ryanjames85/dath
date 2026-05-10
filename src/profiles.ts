@@ -13,8 +13,10 @@ export interface DathProfile {
   contrastMode: ContrastMode;
   contrastStrength: number;
   rainbowBrackets: boolean;
+  rainbowIndents: boolean;
   bracketShapeHints: boolean;
   warmthBias: number;
+  customPalettes: Record<string, any>;
   fontOverride: string;
   fontSizeOverride: number;
   lineHeightOverride: number;
@@ -47,8 +49,10 @@ export function profileFromCurrentConfig(): DathProfile {
     contrastMode: cfg.get('contrastMode') ?? 'none',
     contrastStrength: cfg.get('contrastStrength') ?? 0.5,
     rainbowBrackets: cfg.get('rainbowBrackets') ?? false,
+    rainbowIndents: cfg.get('rainbowIndents') ?? false,
     bracketShapeHints: cfg.get('bracketShapeHints') ?? false,
     warmthBias: cfg.get('warmthBias') ?? 0,
+    customPalettes: cfg.get('customPalettes') ?? {},
     fontOverride: cfg.get('fontOverride') ?? 'none',
     fontSizeOverride: cfg.get('fontSizeOverride') ?? 0,
     lineHeightOverride: cfg.get('lineHeightOverride') ?? 0,
@@ -64,8 +68,10 @@ export async function applyProfile(profile: DathProfile): Promise<void> {
   await cfg.update('contrastMode', profile.contrastMode, target);
   await cfg.update('contrastStrength', profile.contrastStrength, target);
   await cfg.update('rainbowBrackets', profile.rainbowBrackets, target);
+  await cfg.update('rainbowIndents', profile.rainbowIndents, target);
   await cfg.update('bracketShapeHints', profile.bracketShapeHints, target);
   await cfg.update('warmthBias', profile.warmthBias, target);
+  await cfg.update('customPalettes', profile.customPalettes ?? {}, target);
   await cfg.update('fontOverride', profile.fontOverride, target);
   await cfg.update('fontSizeOverride', profile.fontSizeOverride, target);
   await cfg.update('lineHeightOverride', profile.lineHeightOverride, target);
@@ -81,8 +87,10 @@ export const BUILT_IN_PROFILES: Omit<DathProfile, 'name'>[] = [
     contrastMode: 'soften',
     contrastStrength: 0.5,
     rainbowBrackets: true,
+    rainbowIndents: false,
     bracketShapeHints: true,
     warmthBias: 0,
+    customPalettes: {},
     fontOverride: 'none',
     fontSizeOverride: 0,
     lineHeightOverride: 0,
@@ -94,8 +102,10 @@ export const BUILT_IN_PROFILES: Omit<DathProfile, 'name'>[] = [
     contrastMode: 'none',
     contrastStrength: 0.5,
     rainbowBrackets: true,
+    rainbowIndents: false,
     bracketShapeHints: true,
     warmthBias: 0,
+    customPalettes: {},
     fontOverride: 'none',
     fontSizeOverride: 0,
     lineHeightOverride: 0,
@@ -107,8 +117,10 @@ export const BUILT_IN_PROFILES: Omit<DathProfile, 'name'>[] = [
     contrastMode: 'soften',
     contrastStrength: 0.7,
     rainbowBrackets: false,
+    rainbowIndents: false,
     bracketShapeHints: false,
     warmthBias: 0,
+    customPalettes: {},
     fontOverride: 'Atkinson Hyperlegible',
     fontSizeOverride: 0,
     lineHeightOverride: 1.6,

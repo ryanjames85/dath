@@ -2,8 +2,8 @@
   "name": "dath-vscode",
   "displayName": "Dath — Color & Visual Comfort",
   "description": "Your editor, tuned to your eyes. CVD correction, contrast comfort, rainbow brackets, font controls and profiles — as a layer over any theme.",
-  "version": "0.1.0",
-  "publisher": "RyanConnolly",
+  "version": "0.2.0",
+  "publisher": "Ryan Connolly",
   "license": "LicenseRef-PolyForm-Noncommercial-1.0.0",
   "icon": "resources/dath-logo.png",
   "repository": {
@@ -32,8 +32,7 @@
     "CVD",
     "color correction",
     "color filter",
-    "font",
-    "icon"
+    "font"
   ],
   "activationEvents": [
     "onStartupFinished"
@@ -72,6 +71,14 @@
       {
         "command": "dath.importProfiles",
         "title": "Dath: Import Profiles from Clipboard"
+      },
+      {
+        "command": "dath.renameProfile",
+        "title": "Dath: Rename Profile"
+      },
+      {
+        "command": "dath.deleteProfile",
+        "title": "Dath: Delete Profile"
       }
     ],
     "keybindings": [
@@ -126,6 +133,11 @@
           "type": "boolean",
           "default": false,
           "description": "Enable rainbow bracket colouring with CVD-safe palettes."
+        },
+        "dath.rainbowIndents": {
+          "type": "boolean",
+          "default": false,
+          "description": "Colour indent guides to match the active bracket palette. Automatically enables editor.guides.bracketPairs."
         },
         "dath.bracketShapeHints": {
           "type": "boolean",

@@ -39,7 +39,9 @@ export async function activate(ctx: vscode.ExtensionContext): Promise<void> {
     ),
     vscode.commands.registerCommand('dath.runOnboarding', () => handleOnboarding(ctx)),
     vscode.commands.registerCommand('dath.exportProfiles', () => handleExportProfiles(ctx)),
-    vscode.commands.registerCommand('dath.importProfiles', () => handleImportProfiles(ctx))
+    vscode.commands.registerCommand('dath.importProfiles', () => handleImportProfiles(ctx)),
+    vscode.commands.registerCommand('dath.renameProfile', () => handleRenameProfile(ctx)),
+    vscode.commands.registerCommand('dath.deleteProfile', () => handleManageProfiles(ctx))
   );
 
   // Seed built-in profiles on first run
@@ -76,8 +78,12 @@ export async function activate(ctx: vscode.ExtensionContext): Promise<void> {
 }
 
 export async function deactivate(): Promise<void> {
-  await engine.clear();
-  await engine.clearFontSettings();
+  try {
+    await engine.clear();
+    await engine.clearFontSettings();
+  } catch {
+    // Ignored — async calls may be cancelled during extension host teardown
+  }
   statusBar?.dispose();
   configChangeListener?.dispose();
 }
@@ -92,6 +98,7 @@ async function applyCurrentConfig(): Promise<void> {
   const contrastMode = (cfg.get<string>('contrastMode') ?? 'none') as ContrastMode;
   const contrastStrength = cfg.get<number>('contrastStrength') ?? 0.5;
   const rainbowBrackets = cfg.get<boolean>('rainbowBrackets') ?? false;
+  const rainbowIndents = cfg.get<boolean>('rainbowIndents') ?? false;
   const bracketShapeHints = cfg.get<boolean>('bracketShapeHints') ?? false;
   const customPalettes = cfg.get<Record<string, any>>('customPalettes');
   const warmthBias = cfg.get<number>('warmthBias') ?? 0;
@@ -109,7 +116,7 @@ async function applyCurrentConfig(): Promise<void> {
     return;
   }
 
-  await engine.apply(cvdMode, cvdSeverity, contrastMode, contrastStrength, rainbowBrackets, bracketShapeHints, customPalettes, warmthBias, simulationMode);
+  await engine.apply(cvdMode, cvdSeverity, contrastMode, contrastStrength, rainbowBrackets, rainbowIndents, bracketShapeHints, customPalettes, warmthBias, simulationMode);
   await engine.applyFontSettings(fontOverride, fontSize, lineHeight, letterSpacing);
   statusBar.update(true, activeProfile, cvdMode, engine.degraded);
 }
@@ -235,10 +242,55 @@ async function handleOnboarding(ctx: vscode.ExtensionContext): Promise<void> {
     if (shapeHints) {
       await cfg.update('bracketShapeHints', shapeHints.value, target);
     }
+
+    const indentsPick = await vscode.window.showQuickPick([
+      { label: 'Yes', description: 'Colour indent guides to match your bracket pairs', value: true },
+      { label: 'No', description: 'Leave indent guides as-is', value: false }
+    ], { placeHolder: 'Colour indent guides to match rainbow brackets?' });
+    if (indentsPick) {
+      await cfg.update('rainbowIndents', indentsPick.value, target);
+    }
   }
 
+  // Font step
+  const fontPick = await vscode.window.showQuickPick([
+    { label: 'Default', description: 'Keep your current VS Code font', value: 'none' },
+    { label: 'OpenDyslexic', description: 'Reduces reading errors — designed for dyslexia', value: 'OpenDyslexic' },
+    { label: 'Atkinson Hyperlegible', description: 'High legibility for low-vision users', value: 'Atkinson Hyperlegible' },
+    { label: 'Lexie Readable', description: 'Optimised for reading comfort and dyslexia', value: 'Lexie Readable' }
+  ], { placeHolder: 'Choose an editor font (must be installed on your system)' });
+  if (!fontPick) return;
+  if (fontPick.value !== 'none') {
+    await cfg.update('fontOverride', fontPick.value, target);
+  }
+
+  // Final step: activate now?
+  const activatePick = await vscode.window.showQuickPick([
+    { label: 'Yes, activate now', description: 'Apply corrections immediately', value: true },
+    { label: 'Not yet', description: 'Save settings but leave Dath off for now', value: false }
+  ], { placeHolder: 'Activate Dath now?' });
+  if (!activatePick) return;
+
+  await cfg.update('enabled', activatePick.value, target);
   await ctx.globalState.update('dath.onboarded', true);
-  vscode.window.showInformationMessage('Dath is configured. Run "Dath: Save Current Settings as Profile" to save this as a profile.');
+
+  if (activatePick.value) {
+    const action = await vscode.window.showInformationMessage(
+      'Dath is active. Click the panel item in the status bar to adjust settings or turn it off.',
+      'Open Panel'
+    );
+    if (action === 'Open Panel') {
+      DathPanel.show(ctx);
+    }
+  } else {
+    const action = await vscode.window.showInformationMessage(
+      'Settings saved. To turn Dath on, click $(eye) Dath in the status bar.',
+      'Turn On Now'
+    );
+    if (action === 'Turn On Now') {
+      await cfg.update('enabled', true, target);
+    }
+  }
 }
 
 async function handleExportProfiles(ctx: vscode.ExtensionContext): Promise<void> {
@@ -249,6 +301,37 @@ async function handleExportProfiles(ctx: vscode.ExtensionContext): Promise<void>
   }
   await vscode.env.clipboard.writeText(JSON.stringify(profiles, null, 2));
   vscode.window.showInformationMessage(`Dath: ${profiles.length} profile(s) copied to clipboard as JSON.`);
+}
+
+async function handleRenameProfile(ctx: vscode.ExtensionContext): Promise<void> {
+  const profiles = getProfiles(ctx);
+  if (profiles.length === 0) {
+    vscode.window.showInformationMessage('No saved profiles to rename.');
+    return;
+  }
+  const picked = await vscode.window.showQuickPick(
+    profiles.map(p => ({ label: p.name })),
+    { placeHolder: 'Select a profile to rename' }
+  );
+  if (!picked) return;
+
+  const newName = await vscode.window.showInputBox({
+    prompt: `Rename "${picked.label}" to…`,
+    value: picked.label
+  });
+  if (!newName || newName === picked.label) return;
+
+  const profile = getProfiles(ctx).find(p => p.name === picked.label);
+  if (!profile) return;
+
+  await deleteProfile(ctx, picked.label);
+  await saveProfile(ctx, { ...profile, name: newName });
+
+  const cfg = vscode.workspace.getConfiguration('dath');
+  if (cfg.get<string>('activeProfile') === picked.label) {
+    await cfg.update('activeProfile', newName, vscode.ConfigurationTarget.Global);
+  }
+  vscode.window.showInformationMessage(`Dath: profile renamed to "${newName}".`);
 }
 
 async function handleImportProfiles(ctx: vscode.ExtensionContext): Promise<void> {

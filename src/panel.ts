@@ -7,7 +7,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { correctColour, adjustContrast, adjustWarmth, BRACKET_PALETTES } from './cvd';
-import { getProfiles, applyProfile, profileFromCurrentConfig, saveProfile } from './profiles';
+import { getProfiles, applyProfile, profileFromCurrentConfig, saveProfile, deleteProfile } from './profiles';
 import type { CvdMode, ContrastMode } from './cvd';
 
 export class DathPanel {
@@ -77,6 +77,9 @@ export class DathPanel {
         case 'runOnboarding':
           vscode.commands.executeCommand('dath.runOnboarding');
           break;
+        case 'openUrl':
+          vscode.env.openExternal(vscode.Uri.parse(msg.value));
+          break;
         case 'exportProfiles':
           vscode.commands.executeCommand('dath.exportProfiles');
           break;
@@ -84,6 +87,18 @@ export class DathPanel {
           await vscode.commands.executeCommand('dath.importProfiles');
           this.render();
           break;
+        case 'deleteProfile': {
+          const confirm = await vscode.window.showWarningMessage(
+            `Delete profile "${msg.name}"?`,
+            { modal: true },
+            'Delete'
+          );
+          if (confirm === 'Delete') {
+            await deleteProfile(this.ctx, msg.name);
+            this.render();
+          }
+          break;
+        }
         case 'updateSetting': {
           const cfg = vscode.workspace.getConfiguration();
           await cfg.update(msg.key, msg.value, vscode.ConfigurationTarget.Global);
@@ -112,7 +127,7 @@ export class DathPanel {
           const sectionKeys: Record<string, string[]> = {
             cvd:      ['cvdMode', 'cvdSeverity', 'simulationMode'],
             comfort:  ['contrastMode', 'contrastStrength', 'warmthBias'],
-            brackets: ['rainbowBrackets', 'bracketShapeHints'],
+            brackets: ['rainbowBrackets', 'rainbowIndents', 'bracketShapeHints'],
             font:     ['fontOverride', 'fontSizeOverride', 'lineHeightOverride', 'letterSpacingOverride'],
           };
           for (const key of (sectionKeys[msg.section] ?? [])) {
@@ -125,7 +140,7 @@ export class DathPanel {
           const target = vscode.ConfigurationTarget.Global;
           for (const key of [
             'cvdMode', 'cvdSeverity', 'simulationMode', 'contrastMode', 'contrastStrength', 'warmthBias',
-            'rainbowBrackets', 'bracketShapeHints', 'customPalettes',
+            'rainbowBrackets', 'rainbowIndents', 'bracketShapeHints', 'customPalettes',
             'fontOverride', 'fontSizeOverride', 'lineHeightOverride', 'letterSpacingOverride'
           ]) {
             await cfg.update(key, undefined, target);
@@ -145,6 +160,7 @@ export class DathPanel {
     const contrastStrength = cfg.get<number>('contrastStrength') ?? 0.5;
     const warmthBias = cfg.get<number>('warmthBias') ?? 0;
     const rainbowBrackets = cfg.get<boolean>('rainbowBrackets') ?? false;
+    const rainbowIndents = cfg.get<boolean>('rainbowIndents') ?? false;
     const bracketShapeHints = cfg.get<boolean>('bracketShapeHints') ?? false;
     const customPalettes = cfg.get<Record<string, any>>('customPalettes') ?? {};
     const simulationMode = cfg.get<boolean>('simulationMode') ?? false;
@@ -208,6 +224,7 @@ export class DathPanel {
       customPalettes,
       simulationMode,
       rainbowBrackets,
+      rainbowIndents,
       bracketShapeHints,
       fontOverride,
       fontSizeOverride,
@@ -240,6 +257,7 @@ interface RenderData {
   customPalettes: Record<string, any>;
   simulationMode: boolean;
   rainbowBrackets: boolean;
+  rainbowIndents: boolean;
   bracketShapeHints: boolean;
   fontOverride: string;
   fontSizeOverride: number;
@@ -291,9 +309,9 @@ function buildHtml(d: RenderData): string {
   }).join('');
 
   const bracketSwatches = d.bracketPalette.map((c, i) =>
-    `<div class="bracket-swatch" style="background:${c}; position:relative;" title="${c}">
+    `<div class="bracket-swatch" style="background:${c}; position:relative;" title="Bracket pair ${i + 1}: ${c}" aria-label="Bracket pair ${i + 1}, colour ${c}">
       ${i + 1}
-      ${isCustomMode ? `<input type="color" value="${c}" class="color-picker-hidden" onchange="send('updateCustomPalette', { slot: '${d.cvdMode}', bracketIndex: ${i}, color: this.value })">` : ''}
+      ${isCustomMode ? `<input type="color" value="${c}" class="color-picker-hidden" aria-label="Pick colour for bracket pair ${i + 1}" onchange="send('updateCustomPalette', { slot: '${d.cvdMode}', bracketIndex: ${i}, color: this.value })">` : ''}
     </div>`
   ).join('');
 
@@ -301,7 +319,10 @@ function buildHtml(d: RenderData): string {
     ? d.profiles.map(name => `
         <div class="profile-item${name === d.activeProfile ? ' active' : ''}">
           <span class="profile-name">${name}</span>
-          <button class="btn-small" onclick="send('applyProfile', null, '${name}')">Apply</button>
+          <div style="display:flex;gap:6px">
+            <button class="btn-small" aria-label="Apply profile: ${name}" onclick="send('applyProfile', null, '${name}')">Apply</button>
+            <button class="btn-small btn-delete" aria-label="Delete profile: ${name}" onclick="send('deleteProfile', null, '${name}')">×</button>
+          </div>
         </div>`).join('')
     : `<p class="muted">No saved profiles yet.</p>`;
 
@@ -309,12 +330,30 @@ function buildHtml(d: RenderData): string {
   const cvdModes = ['none', 'deuteranopia', 'protanopia', 'tritanopia', 'achromatopsia', 'custom1', 'custom2', 'custom3'];
   const contrastModes = ['none', 'soften', 'dim', 'warm', 'cool'];
 
+  const cvdTitles: Record<string, string> = {
+    none: 'No CVD correction',
+    deuteranopia: 'Correct for deuteranopia — M cone (green) deficiency, ~6% of males',
+    protanopia: 'Correct for protanopia — L cone (red) deficiency, ~2% of males',
+    tritanopia: 'Correct for tritanopia — S cone (blue) deficiency',
+    achromatopsia: 'Correct for achromatopsia — complete colour blindness, luminance only',
+    custom1: 'Custom palette slot 1',
+    custom2: 'Custom palette slot 2',
+    custom3: 'Custom palette slot 3',
+  };
+  const contrastTitles: Record<string, string> = {
+    none: 'No background adjustment',
+    soften: 'Lift pure whites to a warm off-white — reduces snow blindness',
+    dim: 'Reduce overall brightness',
+    warm: 'Warm the background tone slightly',
+    cool: 'Cool the background tone slightly',
+  };
+
   const cvdButtons = cvdModes.map(m =>
-    `<button class="mode-btn${d.cvdMode === m ? ' active' : ''}" onclick="send('updateSetting','dath.cvdMode','${m}')">${m}</button>`
+    `<button class="mode-btn${d.cvdMode === m ? ' active' : ''}" aria-pressed="${d.cvdMode === m}" title="${cvdTitles[m] ?? m}" onclick="send('updateSetting','dath.cvdMode','${m}')">${m}</button>`
   ).join('');
 
   const contrastButtons = contrastModes.map(m =>
-    `<button class="mode-btn${d.contrastMode === m ? ' active' : ''}" onclick="send('updateSetting','dath.contrastMode','${m}')">${m}</button>`
+    `<button class="mode-btn${d.contrastMode === m ? ' active' : ''}" aria-pressed="${d.contrastMode === m}" title="${contrastTitles[m] ?? m}" onclick="send('updateSetting','dath.contrastMode','${m}')">${m}</button>`
   ).join('');
 
   const cvdSevDisplay = d.cvdSeverity.toFixed(2);
@@ -322,10 +361,10 @@ function buildHtml(d: RenderData): string {
   const warmthDisplay = d.warmthBias.toFixed(2);
 
   // Toggle Pill Helper
-  const togglePill = (key: string, current: boolean) => `
-    <div class="toggle-pill">
-      <button class="${!current ? 'active' : ''}" onclick="send('updateSetting','${key}',false)">Off</button>
-      <button class="${current ? 'active' : ''}" onclick="send('updateSetting','${key}',true)">On</button>
+  const togglePill = (key: string, current: boolean, label?: string) => `
+    <div class="toggle-pill" role="group" aria-label="${label ?? key}">
+      <button class="${!current ? 'active' : ''}" aria-pressed="${!current}" onclick="send('updateSetting','${key}',false)">Off</button>
+      <button class="${current ? 'active' : ''}" aria-pressed="${current}" onclick="send('updateSetting','${key}',true)">On</button>
     </div>
   `;
 
@@ -598,6 +637,11 @@ function buildHtml(d: RenderData): string {
     color: var(--btn-fg);
     border-color: var(--btn-bg);
   }
+  .btn-delete:hover {
+    background: rgba(248,81,73,0.15);
+    color: #f85149;
+    border-color: rgba(248,81,73,0.3);
+  }
 
   /* ── Global ── */
   .muted { font-size: 11px; color: var(--muted); }
@@ -646,6 +690,8 @@ function buildHtml(d: RenderData): string {
     border-radius: 6px;
     margin-top: 12px;
   }
+  .font-link { color: var(--accent); text-decoration: none; }
+  .font-link:hover { text-decoration: underline; }
 </style>
 </head>
 <body>
@@ -656,7 +702,7 @@ function buildHtml(d: RenderData): string {
   </div>
   <div class="header-actions">
     <div class="status-tag">${d.enabled ? 'Active' : 'Paused'}</div>
-    ${togglePill('dath.enabled', d.enabled)}
+    ${togglePill('dath.enabled', d.enabled, 'Enable Dath')}
   </div>
 </div>
 
@@ -665,12 +711,13 @@ ${!d.enabled ? `<div class="disabled-notice">Dath is currently paused. Enable it
 <!-- CVD Section -->
 <div class="section">
   <div class="section-head">
-    <div class="section-title">Correction Mode</div>
-    <button class="btn-reset" onclick="send('resetSection','cvd')">Reset</button>
+    <h2 class="section-title">Correction Mode</h2>
+    <button class="btn-reset" title="Reset CVD correction to defaults" onclick="send('resetSection','cvd')">Reset</button>
   </div>
-  <div class="btn-group">
+  <div class="btn-group" role="group" aria-label="CVD correction mode">
     ${cvdButtons}
   </div>
+  <p class="muted" style="font-size:10px;margin:-4px 0 12px">Custom 1–3 — select a slot to build your own colour palette using the pickers in the preview below.</p>
   ${!isCustomMode ? `
   <div class="slider-row">
     <div class="slider-head">
@@ -679,7 +726,8 @@ ${!d.enabled ? `<div class="disabled-notice">Dath is currently paused. Enable it
     </div>
     <div class="slider-container">
       <input type="range" min="0.1" max="1.0" step="0.05" value="${d.cvdSeverity}"
-        oninput="document.getElementById('cvd-sev-val').textContent=parseFloat(this.value).toFixed(2)"
+        aria-label="Correction severity" aria-valuetext="${cvdSevDisplay}"
+        oninput="this.setAttribute('aria-valuetext',parseFloat(this.value).toFixed(2));document.getElementById('cvd-sev-val').textContent=parseFloat(this.value).toFixed(2)"
         onchange="send('updateSetting','dath.cvdSeverity',parseFloat(this.value))">
     </div>
   </div>
@@ -690,17 +738,17 @@ ${!d.enabled ? `<div class="disabled-notice">Dath is currently paused. Enable it
       <span class="slider-label">Simulate only</span>
       <span class="muted" style="font-size:11px">Show how this theme looks to a ${d.cvdMode} user</span>
     </div>
-    ${togglePill('dath.simulationMode', d.simulationMode)}
+    ${togglePill('dath.simulationMode', d.simulationMode, 'Simulate CVD — show what others see instead of correcting')}
   </div>` : ''}
 </div>
 
 <!-- Comfort Section -->
 <div class="section">
   <div class="section-head">
-    <div class="section-title">Visual Comfort</div>
-    <button class="btn-reset" onclick="send('resetSection','comfort')">Reset</button>
+    <h2 class="section-title">Visual Comfort</h2>
+    <button class="btn-reset" title="Reset visual comfort settings to defaults" onclick="send('resetSection','comfort')">Reset</button>
   </div>
-  <div class="btn-group">
+  <div class="btn-group" role="group" aria-label="Contrast mode">
     ${contrastButtons}
   </div>
   <div class="slider-row">
@@ -710,7 +758,8 @@ ${!d.enabled ? `<div class="disabled-notice">Dath is currently paused. Enable it
     </div>
     <div class="slider-container">
       <input type="range" min="0.1" max="1.0" step="0.05" value="${d.contrastStrength}"
-        oninput="document.getElementById('contrast-str-val').textContent=parseFloat(this.value).toFixed(2)"
+        aria-label="Contrast mode intensity" aria-valuetext="${contrastStrDisplay}"
+        oninput="this.setAttribute('aria-valuetext',parseFloat(this.value).toFixed(2));document.getElementById('contrast-str-val').textContent=parseFloat(this.value).toFixed(2)"
         onchange="send('updateSetting','dath.contrastStrength',parseFloat(this.value))">
     </div>
   </div>
@@ -721,7 +770,8 @@ ${!d.enabled ? `<div class="disabled-notice">Dath is currently paused. Enable it
     </div>
     <div class="slider-container">
       <input type="range" min="-1.0" max="1.0" step="0.05" value="${d.warmthBias}"
-        oninput="document.getElementById('warmth-val').textContent=(parseFloat(this.value)>=0?'+':'')+parseFloat(this.value).toFixed(2)"
+        aria-label="Temperature bias — negative is cool, positive is warm" aria-valuetext="${(d.warmthBias >= 0 ? '+' : '') + warmthDisplay}"
+        oninput="this.setAttribute('aria-valuetext',(parseFloat(this.value)>=0?'+':'')+parseFloat(this.value).toFixed(2));document.getElementById('warmth-val').textContent=(parseFloat(this.value)>=0?'+':'')+parseFloat(this.value).toFixed(2)"
         onchange="send('updateSetting','dath.warmthBias',parseFloat(this.value))">
     </div>
   </div>
@@ -730,8 +780,8 @@ ${!d.enabled ? `<div class="disabled-notice">Dath is currently paused. Enable it
 <!-- Brackets Section -->
 <div class="section">
   <div class="section-head">
-    <div class="section-title">Rainbow Brackets</div>
-    <button class="btn-reset" onclick="send('resetSection','brackets')">Reset</button>
+    <h2 class="section-title">Rainbow Brackets</h2>
+    <button class="btn-reset" title="Reset bracket settings to defaults" onclick="send('resetSection','brackets')">Reset</button>
   </div>
   
   <div class="control-row">
@@ -739,7 +789,15 @@ ${!d.enabled ? `<div class="disabled-notice">Dath is currently paused. Enable it
       <div class="control-label">Enabled</div>
       <div class="control-desc">Use distinguishable pair coloring</div>
     </div>
-    ${togglePill('dath.rainbowBrackets', d.rainbowBrackets)}
+    ${togglePill('dath.rainbowBrackets', d.rainbowBrackets, 'Rainbow bracket colouring')}
+  </div>
+
+  <div class="control-row">
+    <div class="control-info">
+      <div class="control-label">Rainbow Indents</div>
+      <div class="control-desc">Colour indent guides to match bracket pairs</div>
+    </div>
+    ${togglePill('dath.rainbowIndents', d.rainbowIndents, 'Rainbow indent guides')}
   </div>
 
   <div class="control-row">
@@ -747,7 +805,7 @@ ${!d.enabled ? `<div class="disabled-notice">Dath is currently paused. Enable it
       <div class="control-label">Shape Hints</div>
       <div class="control-desc">Add subtle underlines to matching pairs</div>
     </div>
-    ${togglePill('dath.bracketShapeHints', d.bracketShapeHints)}
+    ${togglePill('dath.bracketShapeHints', d.bracketShapeHints, 'Bracket shape hints — underline on matching pairs')}
   </div>
 
   <div class="bracket-row" style="margin-top:12px">
@@ -762,7 +820,7 @@ ${!d.enabled ? `<div class="disabled-notice">Dath is currently paused. Enable it
 
 <!-- Preview Section (Palette Studio) -->
 <div class="section" style="border-top:1px solid var(--border); padding-top:24px">
-  <div class="section-title">Live Preview &amp; Editor</div>
+  <h2 class="section-title">Live Preview &amp; Editor</h2>
   <p class="muted" style="margin: 8px 0 16px 0">
     ${isCustomMode 
       ? `Editing <strong>${d.cvdMode}</strong>. Click the right-side swatches to pick custom colours.` 
@@ -777,19 +835,26 @@ ${!d.enabled ? `<div class="disabled-notice">Dath is currently paused. Enable it
 <!-- Font & Spacing Section -->
 <div class="section">
   <div class="section-head">
-    <div class="section-title">Font &amp; Spacing</div>
-    <button class="btn-reset" onclick="send('resetSection','font')">Reset</button>
+    <h2 class="section-title">Font &amp; Spacing</h2>
+    <button class="btn-reset" title="Reset font and spacing to VS Code defaults" onclick="send('resetSection','font')">Reset</button>
   </div>
   
-  <div class="btn-group">
+  <div class="btn-group" role="group" aria-label="Font family preset">
     ${['none','OpenDyslexic','Atkinson Hyperlegible','Lexie Readable'].map(f =>
-      `<button class="mode-btn${d.fontOverride === f ? ' active' : ''}" onclick="send('updateSetting','dath.fontOverride','${f}');document.getElementById('custom-font').value=''">${f === 'none' ? 'Default' : f}</button>`
+      `<button class="mode-btn${d.fontOverride === f ? ' active' : ''}" aria-pressed="${d.fontOverride === f}" title="${f === 'none' ? 'Use VS Code default font' : `Set editor font to ${f}`}" onclick="send('updateSetting','dath.fontOverride','${f}');document.getElementById('custom-font').value=''">${f === 'none' ? 'Default' : f}</button>`
     ).join('')}
   </div>
   <input id="custom-font" type="text" class="font-input"
+    aria-label="Custom font family — type a font name and press Enter"
     placeholder="Or type any installed font name and press Enter…"
     value="${!['none','OpenDyslexic','Atkinson Hyperlegible','Lexie Readable'].includes(d.fontOverride) ? d.fontOverride : ''}"
     onkeydown="if(event.key==='Enter'){const v=this.value.trim();send('updateSetting','dath.fontOverride',v||'none');this.blur();}">
+  <p class="muted" style="margin-top:8px">
+    These fonts must be installed on your system.
+    <a class="font-link" role="button" tabindex="0" title="Download OpenDyslexic" onclick="send('openUrl',null,'https://opendyslexic.org')" onkeydown="if(event.key==='Enter'||event.key===' ')send('openUrl',null,'https://opendyslexic.org')">OpenDyslexic</a> ·
+    <a class="font-link" role="button" tabindex="0" title="Download Atkinson Hyperlegible on Google Fonts" onclick="send('openUrl',null,'https://fonts.google.com/specimen/Atkinson+Hyperlegible')" onkeydown="if(event.key==='Enter'||event.key===' ')send('openUrl',null,'https://fonts.google.com/specimen/Atkinson+Hyperlegible')">Atkinson Hyperlegible</a> ·
+    <a class="font-link" role="button" tabindex="0" title="Download Lexie Readable" onclick="send('openUrl',null,'https://www.lexiereadable.com')" onkeydown="if(event.key==='Enter'||event.key===' ')send('openUrl',null,'https://www.lexiereadable.com')">Lexie Readable</a>
+  </p>
 
   <div class="slider-row" style="margin-top:16px">
     <div class="slider-head">
@@ -798,7 +863,8 @@ ${!d.enabled ? `<div class="disabled-notice">Dath is currently paused. Enable it
     </div>
     <div class="slider-container">
       <input type="range" min="0" max="32" step="1" value="${d.fontSizeOverride}"
-        oninput="document.getElementById('font-size-val').textContent=this.value==0?'Default':this.value+'px'"
+        aria-label="Font size override" aria-valuetext="${d.fontSizeOverride === 0 ? 'Default' : d.fontSizeOverride + 'px'}"
+        oninput="this.setAttribute('aria-valuetext',this.value==0?'Default':this.value+'px');document.getElementById('font-size-val').textContent=this.value==0?'Default':this.value+'px'"
         onchange="send('updateSetting','dath.fontSizeOverride',parseFloat(this.value))">
     </div>
   </div>
@@ -810,7 +876,8 @@ ${!d.enabled ? `<div class="disabled-notice">Dath is currently paused. Enable it
     </div>
     <div class="slider-container">
       <input type="range" min="0" max="3" step="0.05" value="${d.lineHeightOverride}"
-        oninput="document.getElementById('line-height-val').textContent=parseFloat(this.value)==0?'Default':parseFloat(this.value).toFixed(2)"
+        aria-label="Line height override" aria-valuetext="${d.lineHeightOverride === 0 ? 'Default' : d.lineHeightOverride.toFixed(2)}"
+        oninput="this.setAttribute('aria-valuetext',parseFloat(this.value)==0?'Default':parseFloat(this.value).toFixed(2));document.getElementById('line-height-val').textContent=parseFloat(this.value)==0?'Default':parseFloat(this.value).toFixed(2)"
         onchange="send('updateSetting','dath.lineHeightOverride',parseFloat(this.value))">
     </div>
   </div>
@@ -822,7 +889,8 @@ ${!d.enabled ? `<div class="disabled-notice">Dath is currently paused. Enable it
     </div>
     <div class="slider-container">
       <input type="range" min="0" max="5" step="0.5" value="${d.letterSpacingOverride}"
-        oninput="document.getElementById('letter-spacing-val').textContent=parseFloat(this.value)==0?'Default':parseFloat(this.value).toFixed(1)+'px'"
+        aria-label="Letter spacing override" aria-valuetext="${d.letterSpacingOverride === 0 ? 'Default' : d.letterSpacingOverride.toFixed(1) + 'px'}"
+        oninput="this.setAttribute('aria-valuetext',parseFloat(this.value)==0?'Default':parseFloat(this.value).toFixed(1)+'px');document.getElementById('letter-spacing-val').textContent=parseFloat(this.value)==0?'Default':parseFloat(this.value).toFixed(1)+'px'"
         onchange="send('updateSetting','dath.letterSpacingOverride',parseFloat(this.value))">
     </div>
   </div>
@@ -830,8 +898,9 @@ ${!d.enabled ? `<div class="disabled-notice">Dath is currently paused. Enable it
 
 <!-- Profiles Section -->
 <div class="section">
-  <div class="section-title">Saved Profiles</div>
-  <div class="profile-grid" style="margin-top:12px">
+  <h2 class="section-title">My Configurations</h2>
+  <p class="muted" style="margin:8px 0 12px">Saved snapshots of all your settings — including CVD mode, contrast, font, brackets, and any custom colour palettes.</p>
+  <div class="profile-grid">
     ${profileItems}
   </div>
   <button class="btn-primary" onclick="send('saveProfile')">+ Save Current Configuration</button>
@@ -852,6 +921,8 @@ ${!d.enabled ? `<div class="disabled-notice">Dath is currently paused. Enable it
       vscode.postMessage({ type, name: value });
     } else if (type === 'resetSection') {
       vscode.postMessage({ type, section: key });
+    } else if (type === 'openUrl') {
+      vscode.postMessage({ type, value });
     } else {
       vscode.postMessage({ type });
     }

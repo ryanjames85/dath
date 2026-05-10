@@ -58,6 +58,8 @@ CVD-safe bracket palettes derived from the Wong (2011) colour palette — distin
 
 **Shape hints** add a subtle underline to matching bracket pairs so they are identifiable without relying on colour alone.
 
+**Rainbow indent guides** colour VS Code's indent guide lines to match the bracket palette, giving an additional spatial cue for nested code structure.
+
 ### Font & Spacing
 
 Override editor typography without editing settings.json manually:
@@ -123,6 +125,8 @@ Dath manages 185 workbench colour tokens spanning the editor, sidebar, tabs, ter
 | `Dath: Run Setup Wizard` | Run the onboarding wizard again |
 | `Dath: Export Profiles to Clipboard` | Copy all saved profiles as JSON |
 | `Dath: Import Profiles from Clipboard` | Import profiles from clipboard JSON |
+| `Dath: Rename Profile` | Rename a saved profile |
+| `Dath: Delete Profile` | Delete a saved profile |
 
 ---
 
@@ -138,6 +142,7 @@ Dath manages 185 workbench colour tokens spanning the editor, sidebar, tabs, ter
 | `dath.contrastStrength` | `0.5` | Contrast adjustment strength 0.1–1.0 |
 | `dath.warmthBias` | `0` | Hue tint: positive = warm, negative = cool, 0 = neutral |
 | `dath.rainbowBrackets` | `false` | CVD-safe rainbow bracket colouring |
+| `dath.rainbowIndents` | `false` | Colour indent guides to match the rainbow bracket palette |
 | `dath.bracketShapeHints` | `false` | Underline hints on bracket pairs |
 | `dath.fontOverride` | `none` | Any installed font name, or `none` for VS Code default |
 | `dath.fontSizeOverride` | `0` | Font size in px (0 = VS Code default) |

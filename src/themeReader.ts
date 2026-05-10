@@ -95,7 +95,13 @@ function findThemeFile(themeName: string): string | null {
 
 // ── Theme file parsing ────────────────────────────────────────────────────────
 
-function parseThemeFile(filePath: string, themeName: string): ThemeColours {
+function parseThemeFile(filePath: string, themeName: string, visited: Set<string> = new Set()): ThemeColours {
+  const resolved = path.resolve(filePath);
+  if (visited.has(resolved)) {
+    return { themeName, workbench: {}, tokens: {} };
+  }
+  visited.add(resolved);
+
   const raw = fs.readFileSync(filePath, 'utf-8');
 
   // Theme files are JSON with comments (JSONC) — strip comments before parsing
@@ -138,7 +144,7 @@ function parseThemeFile(filePath: string, themeName: string): ThemeColours {
     try {
       const baseFile = path.resolve(path.dirname(filePath), json.include);
       if (fs.existsSync(baseFile)) {
-        const base = parseThemeFile(baseFile, themeName);
+        const base = parseThemeFile(baseFile, themeName, visited);
         // Merge — current theme overrides base
         return {
           themeName,

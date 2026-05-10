@@ -261,6 +261,7 @@ export class ThemeEngine {
     contrastMode: ContrastMode,
     contrastStrength: number,
     rainbowBrackets: boolean,
+    rainbowIndents: boolean,
     bracketShapeHints: boolean,
     customPalettes: Record<string, any> | undefined,
     warmthBias: number = 0,
@@ -360,18 +361,27 @@ export class ThemeEngine {
       }
     }
 
-    // Rainbow brackets
-    if (rainbowBrackets) {
-      let palette: string[];
-      if (activePalette && activePalette.brackets) {
-        palette = activePalette.brackets;
-      } else {
-        palette = BRACKET_PALETTES[cvdMode] ?? BRACKET_PALETTES.default;
+    // Rainbow brackets + indent guides share the same palette
+    if (rainbowBrackets || rainbowIndents) {
+      const palette: string[] = (activePalette && activePalette.brackets)
+        ? activePalette.brackets
+        : (BRACKET_PALETTES[cvdMode] ?? BRACKET_PALETTES.default);
+
+      if (rainbowBrackets) {
+        palette.forEach((colour, i) => {
+          corrections[`editorBracketHighlight.foreground${i + 1}`] = colour;
+        });
       }
-      
-      palette.forEach((colour, i) => {
-        corrections[`editorBracketHighlight.foreground${i + 1}`] = colour;
-      });
+
+      if (rainbowIndents) {
+        palette.forEach((colour, i) => {
+          corrections[`editorBracketPairGuide.background${i + 1}`] = colour + '25';
+          corrections[`editorBracketPairGuide.activeBackground${i + 1}`] = colour + '70';
+        });
+        await workbenchConfig.update('editor.guides.bracketPairs', true, vscode.ConfigurationTarget.Global);
+      } else {
+        await workbenchConfig.update('editor.guides.bracketPairs', undefined, vscode.ConfigurationTarget.Global);
+      }
     }
 
     // Bracket Shape Hints (Underline)
@@ -462,8 +472,11 @@ export class ThemeEngine {
 
     const allManagedKeys = [
       ...MANAGED_TOKENS,
-      ...Array.from({ length: 6 }, (_, i) => `editorBracketHighlight.foreground${i + 1}`)
+      ...Array.from({ length: 6 }, (_, i) => `editorBracketHighlight.foreground${i + 1}`),
+      ...Array.from({ length: 6 }, (_, i) => `editorBracketPairGuide.background${i + 1}`),
+      ...Array.from({ length: 6 }, (_, i) => `editorBracketPairGuide.activeBackground${i + 1}`),
     ];
+    await workbenchConfig.update('editor.guides.bracketPairs', undefined, vscode.ConfigurationTarget.Global);
 
     const cleaned = Object.fromEntries(
       Object.entries(existing).filter(([k]) => !allManagedKeys.includes(k))
