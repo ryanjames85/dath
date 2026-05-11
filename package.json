@@ -2,8 +2,8 @@
   "name": "dath-vscode",
   "displayName": "Dath — Color & Visual Comfort",
   "description": "Your editor, tuned to your eyes. CVD correction, contrast comfort, rainbow brackets, font controls and profiles — as a layer over any theme.",
-  "version": "0.2.0",
-  "publisher": "Ryan Connolly",
+  "version": "0.3.0",
+  "publisher": "RyanConnolly",
   "license": "LicenseRef-PolyForm-Noncommercial-1.0.0",
   "icon": "resources/dath-logo.png",
   "repository": {
@@ -191,6 +191,16 @@
           "type": "object",
           "default": {},
           "description": "Storage for your custom defined color mappings (Custom 1, 2, 3)."
+        },
+        "dath.darkModeProfile": {
+          "type": "string",
+          "default": "",
+          "description": "Profile to auto-apply when VS Code switches to a dark colour theme. Leave blank to disable."
+        },
+        "dath.lightModeProfile": {
+          "type": "string",
+          "default": "",
+          "description": "Profile to auto-apply when VS Code switches to a light colour theme. Leave blank to disable."
         }
       }
     }

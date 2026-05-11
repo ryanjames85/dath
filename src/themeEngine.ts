@@ -361,6 +361,38 @@ export class ThemeEngine {
       }
     }
 
+    // Correct semantic token colours
+    const semanticCorrections: Record<string, string> = {};
+    for (const [key, hex] of Object.entries(cache.semanticTokens)) {
+      let corrected = hex;
+      if (cvdMode !== 'none' && !cvdMode.startsWith('custom')) {
+        corrected = simulationMode
+          ? simulateColour(corrected, cvdMode)
+          : correctColour(corrected, cvdMode, cvdSeverity);
+      }
+      if (warmthBias !== 0) {
+        corrected = adjustWarmth(corrected, warmthBias);
+      }
+      if (corrected !== hex) {
+        semanticCorrections[key] = corrected;
+      }
+    }
+
+    if (Object.keys(semanticCorrections).length > 0) {
+      const existingSemantic =
+        workbenchConfig.get<Record<string, unknown>>('editor.semanticTokenColorCustomizations') ?? {};
+      const existingRules = (existingSemantic.rules as Record<string, string>) ?? {};
+      const dathKeys = new Set(Object.keys(semanticCorrections));
+      const preserved = Object.fromEntries(
+        Object.entries(existingRules).filter(([k]) => !dathKeys.has(k))
+      );
+      await workbenchConfig.update(
+        'editor.semanticTokenColorCustomizations',
+        { ...existingSemantic, rules: { ...preserved, ...semanticCorrections } },
+        vscode.ConfigurationTarget.Global
+      );
+    }
+
     // Rainbow brackets + indent guides share the same palette
     if (rainbowBrackets || rainbowIndents) {
       const palette: string[] = (activePalette && activePalette.brackets)
@@ -487,6 +519,24 @@ export class ThemeEngine {
       Object.keys(cleaned).length > 0 ? cleaned : undefined,
       vscode.ConfigurationTarget.Global
     );
+
+    // Clear semantic token corrections
+    if (themeCache && Object.keys(themeCache.semanticTokens).length > 0) {
+      const dathSemanticKeys = new Set(Object.keys(themeCache.semanticTokens));
+      const existingSemantic =
+        workbenchConfig.get<Record<string, unknown>>('editor.semanticTokenColorCustomizations') ?? {};
+      const existingRules = (existingSemantic.rules as Record<string, string>) ?? {};
+      const preservedRules = Object.fromEntries(
+        Object.entries(existingRules).filter(([k]) => !dathSemanticKeys.has(k))
+      );
+      await workbenchConfig.update(
+        'editor.semanticTokenColorCustomizations',
+        Object.keys(preservedRules).length > 0
+          ? { ...existingSemantic, rules: preservedRules }
+          : undefined,
+        vscode.ConfigurationTarget.Global
+      );
+    }
 
     // Clear syntax token corrections — remove only Dath's injected rules
     // We identify them by checking against the cached theme scopes

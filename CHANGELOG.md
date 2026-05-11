@@ -77,6 +77,20 @@ Initial release.
 
 ---
 
+## [0.3.0] — Unreleased
+
+### Added
+
+#### CVD Colour Correction
+
+- Semantic token correction — reads `semanticTokenColors` from the theme file and corrects them via `editor.semanticTokenColorCustomizations`. Covers the semantic highlighting layer used by modern themes (GitHub Theme, Catppuccin, One Dark Pro, etc.) alongside the existing TextMate scope correction.
+
+#### Profiles
+
+- Auto dark/light profile switching — set `dath.darkModeProfile` and/or `dath.lightModeProfile` to a saved profile name. Dath automatically applies the matching profile when VS Code switches between dark and light themes, including when the OS appearance changes.
+
+---
+
 ## [0.2.0] — Unreleased
 
 ### Added

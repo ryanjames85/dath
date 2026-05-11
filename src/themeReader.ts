@@ -15,6 +15,8 @@ export interface ThemeColours {
   workbench: Record<string, string>;
   /** syntax token colours — keyed by TextMate scope */
   tokens: Record<string, string>;
+  /** semantic token colours — keyed by semantic token type/modifier */
+  semanticTokens: Record<string, string>;
   /** raw theme name, for cache keying */
   themeName: string;
 }
@@ -98,7 +100,7 @@ function findThemeFile(themeName: string): string | null {
 function parseThemeFile(filePath: string, themeName: string, visited: Set<string> = new Set()): ThemeColours {
   const resolved = path.resolve(filePath);
   if (visited.has(resolved)) {
-    return { themeName, workbench: {}, tokens: {} };
+    return { themeName, workbench: {}, tokens: {}, semanticTokens: {} };
   }
   visited.add(resolved);
 
@@ -110,6 +112,7 @@ function parseThemeFile(filePath: string, themeName: string, visited: Set<string
 
   const workbench: Record<string, string> = {};
   const tokens: Record<string, string> = {};
+  const semanticTokens: Record<string, string> = {};
 
   // Extract workbench colour tokens
   if (json.colors) {
@@ -139,6 +142,16 @@ function parseThemeFile(filePath: string, themeName: string, visited: Set<string
     }
   }
 
+  // Extract semantic token colours
+  if (json.semanticTokenColors) {
+    for (const [key, value] of Object.entries(json.semanticTokenColors)) {
+      const colour = typeof value === 'string' ? value : value?.foreground;
+      if (colour && isHex(colour)) {
+        semanticTokens[key] = normaliseHex(colour);
+      }
+    }
+  }
+
   // Handle include/extends — some themes reference a base theme
   if (json.include) {
     try {
@@ -149,7 +162,8 @@ function parseThemeFile(filePath: string, themeName: string, visited: Set<string
         return {
           themeName,
           workbench: { ...base.workbench, ...workbench },
-          tokens: { ...base.tokens, ...tokens }
+          tokens: { ...base.tokens, ...tokens },
+          semanticTokens: { ...base.semanticTokens, ...semanticTokens }
         };
       }
     } catch {
@@ -157,7 +171,7 @@ function parseThemeFile(filePath: string, themeName: string, visited: Set<string
     }
   }
 
-  return { themeName, workbench, tokens };
+  return { themeName, workbench, tokens, semanticTokens };
 }
 
 // ── Utilities ─────────────────────────────────────────────────────────────────
@@ -260,9 +274,19 @@ interface TokenRule {
   };
 }
 
+interface SemanticTokenValue {
+  foreground?: string;
+  bold?: boolean;
+  italic?: boolean;
+  underline?: boolean;
+  strikethrough?: boolean;
+}
+
 interface ThemeJson {
   colors?: Record<string, string>;
   tokenColors?: TokenRule[];
+  semanticTokenColors?: Record<string, string | SemanticTokenValue>;
+  semanticHighlighting?: boolean;
   include?: string;
   'editor.tokenColorCustomizations'?: {
     textMateRules?: TokenRule[];

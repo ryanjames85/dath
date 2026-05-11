@@ -50,6 +50,23 @@ export async function activate(ctx: vscode.ExtensionContext): Promise<void> {
   // Apply on startup — don't await, activation must complete so commands are available immediately
   applyCurrentConfig().catch(err => console.warn('[Dath] Initial apply failed:', err));
 
+  // Auto-switch profile when VS Code switches between light and dark themes
+  ctx.subscriptions.push(
+    vscode.window.onDidChangeActiveColorTheme(async (theme) => {
+      const cfg = vscode.workspace.getConfiguration('dath');
+      const isDark = theme.kind !== vscode.ColorThemeKind.Light;
+      const profileName = cfg.get<string>(isDark ? 'darkModeProfile' : 'lightModeProfile') ?? '';
+      if (!profileName) return;
+      const profile = getProfiles(ctx).find(p => p.name === profileName);
+      if (profile) {
+        await applyProfile(profile);
+        engine.invalidateCache();
+        await applyCurrentConfig();
+        vscode.window.showInformationMessage(`Dath: auto-switched to "${profileName}".`);
+      }
+    })
+  );
+
   // Re-apply when settings change
   configChangeListener = vscode.workspace.onDidChangeConfiguration(async (e) => {
     if (e.affectsConfiguration('dath')) {

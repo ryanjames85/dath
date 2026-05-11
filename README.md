@@ -71,13 +71,15 @@ Override editor typography without editing settings.json manually:
 
 ### Profiles
 
-Named configurations that switch in one click. Save your current settings as a profile at any time. Three built-in starters are included on first install:
+Named configurations that switch in one click. Save, rename, delete, export, and import profiles from the panel or command palette. Three built-in starters are included on first install:
 
 | Profile | Description |
 | --- | --- |
 | Deuteranopia | Full deuteranopia correction, softened backgrounds, CVD-safe brackets |
 | Protanopia | Full protanopia correction, CVD-safe brackets |
 | Dyslexia Comfort | Softened contrast, Atkinson Hyperlegible font, increased line height |
+
+**Auto dark/light switching** — set `dath.darkModeProfile` and `dath.lightModeProfile` to automatically apply the right profile when VS Code (or the OS) switches between dark and light mode.
 
 ### Visual Panel
 
@@ -87,7 +89,7 @@ Click the status bar item to open the Dath panel — a live interactive control 
 - Global reset restores all Dath settings at once
 - Live colour correction preview shows before/after swatches for representative theme colours
 - Bracket palette preview updates in real time
-- Profile management — apply, save, export, and import profiles without leaving the panel
+- Profile management — apply, save, rename, delete, export, and import profiles without leaving the panel
 - Simulate toggle — preview what your theme looks like to a CVD user
 - Status bar shows a warning indicator if the theme file could not be read
 
@@ -96,11 +98,11 @@ Click the status bar item to open the Dath panel — a live interactive control 
 ## How It Works
 
 1. On activation, Dath reads your active theme's JSON file from disk (including JSONC comment stripping and `include` chain resolution)
-2. It applies the LMS daltonization pipeline to workbench colour tokens and TextMate syntax scopes
-3. Corrected values are written to `workbench.colorCustomizations` and `editor.tokenColorCustomizations` in your global settings
+2. It applies the LMS daltonization pipeline to workbench colour tokens, TextMate syntax scopes, and semantic token colours
+3. Corrected values are written to `workbench.colorCustomizations`, `editor.tokenColorCustomizations`, and `editor.semanticTokenColorCustomizations` in your global settings
 4. When you disable Dath or change settings, only Dath's entries are removed — your own customisations are preserved
 
-Dath manages 185 workbench colour tokens spanning the editor, sidebar, tabs, terminal, diff view, and more.
+Dath manages 185 workbench colour tokens spanning the editor, sidebar, tabs, terminal, diff view, and more. It also reads and corrects `semanticTokenColors` from the theme file, covering the semantic highlighting layer used by modern themes alongside TextMate scopes.
 
 ---
 
@@ -150,6 +152,8 @@ Dath manages 185 workbench colour tokens spanning the editor, sidebar, tabs, ter
 | `dath.letterSpacingOverride` | `0` | Letter spacing in px (0 = VS Code default) |
 | `dath.activeProfile` | `""` | Active profile name — managed by Dath |
 | `dath.customPalettes` | `{}` | Custom colour role mappings for Custom 1/2/3 modes |
+| `dath.darkModeProfile` | `""` | Profile to auto-apply when VS Code switches to a dark theme |
+| `dath.lightModeProfile` | `""` | Profile to auto-apply when VS Code switches to a light theme |
 
 ---
 
