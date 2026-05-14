@@ -23,6 +23,15 @@ import type { CvdMode, ContrastMode } from './cvd';
 let statusBar: DathStatusBar;
 let engine: ThemeEngine;
 let configChangeListener: vscode.Disposable | undefined;
+let applyDebounceTimer: ReturnType<typeof setTimeout> | undefined;
+
+function scheduleApply(): void {
+  if (applyDebounceTimer) { clearTimeout(applyDebounceTimer); }
+  applyDebounceTimer = setTimeout(() => {
+    applyDebounceTimer = undefined;
+    applyCurrentConfig().catch(err => console.warn('[Dath] Apply failed:', err));
+  }, 50);
+}
 
 export async function activate(ctx: vscode.ExtensionContext): Promise<void> {
   engine = new ThemeEngine();
@@ -67,15 +76,15 @@ export async function activate(ctx: vscode.ExtensionContext): Promise<void> {
     })
   );
 
-  // Re-apply when settings change
-  configChangeListener = vscode.workspace.onDidChangeConfiguration(async (e) => {
+  // Re-apply when settings change — debounced to avoid race conditions from rapid
+  // sequential updates (e.g. applyProfile() making 14 cfg.update() calls in a row)
+  configChangeListener = vscode.workspace.onDidChangeConfiguration((e) => {
     if (e.affectsConfiguration('dath')) {
-      await applyCurrentConfig();
+      scheduleApply();
     }
-    // Invalidate theme cache and re-apply when the active theme changes
     if (e.affectsConfiguration('workbench.colorTheme')) {
       engine.invalidateCache();
-      await applyCurrentConfig();
+      scheduleApply();
     }
   });
   ctx.subscriptions.push(configChangeListener);

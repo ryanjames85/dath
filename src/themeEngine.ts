@@ -11,6 +11,7 @@
 import * as vscode from 'vscode';
 import { correctColour, simulateColour, adjustContrast, adjustWarmth, isHex, BRACKET_PALETTES } from './cvd';
 import { readActiveTheme, pickColourManually } from './themeReader';
+import { BracketDecorator } from './bracketDecorator';
 import type { ThemeColours } from './themeReader';
 import type { CvdMode, ContrastMode } from './cvd';
 
@@ -253,6 +254,7 @@ const MANAGED_TOKENS: string[] = [
 
 export class ThemeEngine {
   private _degraded = false;
+  private bracketDecorator = new BracketDecorator();
   get degraded(): boolean { return this._degraded; }
 
   async apply(
@@ -393,43 +395,27 @@ export class ThemeEngine {
       );
     }
 
-    // Rainbow brackets + indent guides share the same palette
-    if (rainbowBrackets || rainbowIndents) {
-      const palette: string[] = (activePalette && activePalette.brackets)
-        ? activePalette.brackets
-        : (BRACKET_PALETTES[cvdMode] ?? BRACKET_PALETTES.default);
+    // Rainbow brackets — colours applied via editor decorations (not
+    // workbench.colorCustomizations) so they work with any theme extension.
+    const palette: string[] = (activePalette && activePalette.brackets)
+      ? activePalette.brackets
+      : (BRACKET_PALETTES[cvdMode] ?? BRACKET_PALETTES.default);
 
-      if (rainbowBrackets) {
-        palette.forEach((colour, i) => {
-          corrections[`editorBracketHighlight.foreground${i + 1}`] = colour;
-        });
-      }
-
-      if (rainbowIndents) {
-        palette.forEach((colour, i) => {
-          corrections[`editorBracketPairGuide.background${i + 1}`] = colour + '25';
-          corrections[`editorBracketPairGuide.activeBackground${i + 1}`] = colour + '70';
-        });
-        await workbenchConfig.update('editor.guides.bracketPairs', true, vscode.ConfigurationTarget.Global);
-      } else {
-        await workbenchConfig.update('editor.guides.bracketPairs', undefined, vscode.ConfigurationTarget.Global);
-      }
+    if (rainbowBrackets || bracketShapeHints) {
+      this.bracketDecorator.apply(palette, rainbowBrackets, bracketShapeHints);
+    } else {
+      this.bracketDecorator.clear();
     }
 
-    // Bracket Shape Hints (Underline)
-    if (bracketShapeHints) {
-      tokenCorrections.push({
-        scope: [
-          'punctuation.definition.bracket',
-          'punctuation.bracket',
-          'meta.brace',
-          'punctuation.definition.parameters',
-          'punctuation.section.group',
-          'punctuation.section.block',
-          'punctuation.section.bracket'
-        ],
-        settings: { fontStyle: 'underline' }
+    // Rainbow indent guides — these must stay in colorCustomizations (no decoration API for guides)
+    if (rainbowIndents) {
+      palette.forEach((colour, i) => {
+        corrections[`editorBracketPairGuide.background${i + 1}`] = colour + '25';
+        corrections[`editorBracketPairGuide.activeBackground${i + 1}`] = colour + '70';
       });
+      await workbenchConfig.update('editor.guides.bracketPairs', true, vscode.ConfigurationTarget.Global);
+    } else {
+      await workbenchConfig.update('editor.guides.bracketPairs', undefined, vscode.ConfigurationTarget.Global);
     }
 
     // Write workbench colour corrections — preserve user's own overrides
@@ -502,8 +488,11 @@ export class ThemeEngine {
     const existing: Record<string, string> =
       workbenchConfig.get('workbench.colorCustomizations') ?? {};
 
+    this.bracketDecorator.clear();
+
     const allManagedKeys = [
       ...MANAGED_TOKENS,
+      // Legacy cleanup — foreground keys no longer written but may exist from older installs
       ...Array.from({ length: 6 }, (_, i) => `editorBracketHighlight.foreground${i + 1}`),
       ...Array.from({ length: 6 }, (_, i) => `editorBracketPairGuide.background${i + 1}`),
       ...Array.from({ length: 6 }, (_, i) => `editorBracketPairGuide.activeBackground${i + 1}`),
