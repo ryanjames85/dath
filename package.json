@@ -2,7 +2,7 @@
   "name": "dath-vscode",
   "displayName": "Dath — Color & Visual Comfort",
   "description": "Your editor, tuned to your eyes. CVD correction, contrast comfort, rainbow brackets, font controls and profiles — as a layer over any theme.",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "publisher": "RyanConnolly",
   "license": "LicenseRef-PolyForm-Noncommercial-1.0.0",
   "icon": "resources/dath-logo.png",

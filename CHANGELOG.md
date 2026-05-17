@@ -7,6 +7,79 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.3.1] — 2026-05-17
+
+### Fixed
+
+- Rainbow bracket colouring now uses editor decoration types instead of `workbench.colorCustomizations` — works correctly with any theme extension (e.g. Catppuccin) that manages that setting programmatically
+- Debounce added to config change listener to prevent race conditions when multiple settings update in rapid succession (e.g. when applying a profile)
+- `editor.lineHighlightBackground` removed from CVD correction — daltonization was producing an overly vivid current-line highlight that made text illegible
+
+### Changed
+
+- New logo with automatic dark/light mode switching via `<picture>` element
+- VS Code fork compatibility (Cursor, Windsurf, Gitpod, VSCodium, etc.) documented in README
+
+---
+
+## [0.3.0] — 2026-05-11
+
+### Added
+
+#### CVD Colour Correction
+
+- Semantic token correction — reads `semanticTokenColors` from the theme file and corrects them via `editor.semanticTokenColorCustomizations`. Covers the semantic highlighting layer used by modern themes (GitHub Theme, Catppuccin, One Dark Pro, etc.) alongside the existing TextMate scope correction.
+
+#### Profiles
+
+- Auto dark/light profile switching — set `dath.darkModeProfile` and/or `dath.lightModeProfile` to a saved profile name. Dath automatically applies the matching profile when VS Code switches between dark and light themes, including when the OS appearance changes.
+
+---
+
+## [0.2.0] — 2026-05-10
+
+### Added
+
+#### CVD Colour Correction
+
+- Achromatopsia mode — rod monochromacy (complete colour blindness). Simulation collapses all channels to luminance; correction re-encodes colour differences as brightness contrast. Luminance-contrast bracket palette included.
+- CVD simulation mode (`dath.simulationMode`) — instead of correcting your theme, shows how it looks to someone with the selected CVD type. Toggle in the panel CVD section. Useful for theme authors and for demonstrating CVD to colleagues.
+- Custom palette discoverability hint — a small inline label below the CVD mode buttons explains what the Custom 1–3 slots do and how to activate them.
+
+#### Rainbow Brackets
+
+- Rainbow indent guides (`dath.rainbowIndents`) — colours VS Code's indent guide lines to match the active bracket palette, providing an additional spatial cue for nested code structure. Automatically enables `editor.guides.bracketPairs` when active.
+
+#### Profiles
+
+- Export profiles to clipboard (`Dath: Export Profiles to Clipboard`) — serialises all saved profiles as JSON
+- Import profiles from clipboard (`Dath: Import Profiles from Clipboard`) — merges profiles from clipboard JSON, overwriting any with matching names
+- Export and import buttons added directly to the panel Profiles section
+- Rename profile command (`Dath: Rename Profile`) — select a saved profile and give it a new name; active profile reference updates automatically
+- Delete profile command (`Dath: Delete Profile`) — top-level command to delete a profile without going through the Switch Profile flow; also available as a `×` button on each profile card in the panel
+- Profiles section in the panel renamed to "My Configurations" to better reflect that profiles capture all settings including custom palettes
+- Fixed: `warmthBias` was missing from saved profiles — it is now captured and restored correctly
+- Fixed: `customPalettes` was missing from saved profiles — custom colour maps are now captured and restored correctly
+
+#### Panel
+
+- Full accessibility pass — all interactive controls have `aria-label`, `aria-pressed`, and `aria-valuetext` attributes; section titles use `<h2>`; keyboard-navigable font download links
+- Font download links for OpenDyslexic, Atkinson Hyperlegible, and Lexie Readable — open in the system browser via `vscode.env.openExternal`
+
+#### Onboarding (Setup Wizard)
+
+- Rainbow indents step — asked after rainbow brackets is enabled; lets users opt in to coloured indent guides during setup
+- Font choice step — pick from OpenDyslexic, Atkinson Hyperlegible, Lexie Readable, or Default during setup
+- Final activation step — choose whether to activate Dath immediately or save settings for later, with a status bar notification either way
+
+#### Core
+
+- Keyboard shortcut `Ctrl+Alt+D` / `Cmd+Alt+D` to open the panel
+- Status bar degraded indicator — shows a warning icon when the theme file cannot be read and Dath is running in manual fallback mode
+- Theme file include-chain cycle detection — `parseThemeFile` now tracks visited paths to prevent infinite loops when theme files contain circular `include` references
+
+---
+
 ## [0.1.0] — 2026-05-07
 
 Initial release.
@@ -74,61 +147,3 @@ Initial release.
 - Fire-and-forget activation to prevent blocking command registration
 - Theme cache with invalidation on theme change
 - Manual colour correction fallback (clipboard copy) when theme file cannot be read
-
----
-
-## [0.3.0] — Unreleased
-
-### Added
-
-#### CVD Colour Correction
-
-- Semantic token correction — reads `semanticTokenColors` from the theme file and corrects them via `editor.semanticTokenColorCustomizations`. Covers the semantic highlighting layer used by modern themes (GitHub Theme, Catppuccin, One Dark Pro, etc.) alongside the existing TextMate scope correction.
-
-#### Profiles
-
-- Auto dark/light profile switching — set `dath.darkModeProfile` and/or `dath.lightModeProfile` to a saved profile name. Dath automatically applies the matching profile when VS Code switches between dark and light themes, including when the OS appearance changes.
-
----
-
-## [0.2.0] — Unreleased
-
-### Added
-
-#### CVD Colour Correction
-
-- Achromatopsia mode — rod monochromacy (complete colour blindness). Simulation collapses all channels to luminance; correction re-encodes colour differences as brightness contrast. Luminance-contrast bracket palette included.
-- CVD simulation mode (`dath.simulationMode`) — instead of correcting your theme, shows how it looks to someone with the selected CVD type. Toggle in the panel CVD section. Useful for theme authors and for demonstrating CVD to colleagues.
-- Custom palette discoverability hint — a small inline label below the CVD mode buttons explains what the Custom 1–3 slots do and how to activate them.
-
-#### Rainbow Brackets
-
-- Rainbow indent guides (`dath.rainbowIndents`) — colours VS Code's indent guide lines to match the active bracket palette, providing an additional spatial cue for nested code structure. Automatically enables `editor.guides.bracketPairs` when active.
-
-#### Profiles
-
-- Export profiles to clipboard (`Dath: Export Profiles to Clipboard`) — serialises all saved profiles as JSON
-- Import profiles from clipboard (`Dath: Import Profiles from Clipboard`) — merges profiles from clipboard JSON, overwriting any with matching names
-- Export and import buttons added directly to the panel Profiles section
-- Rename profile command (`Dath: Rename Profile`) — select a saved profile and give it a new name; active profile reference updates automatically
-- Delete profile command (`Dath: Delete Profile`) — top-level command to delete a profile without going through the Switch Profile flow; also available as a `×` button on each profile card in the panel
-- Profiles section in the panel renamed to "My Configurations" to better reflect that profiles capture all settings including custom palettes
-- Fixed: `warmthBias` was missing from saved profiles — it is now captured and restored correctly
-- Fixed: `customPalettes` was missing from saved profiles — custom colour maps are now captured and restored correctly
-
-#### Panel
-
-- Full accessibility pass — all interactive controls have `aria-label`, `aria-pressed`, and `aria-valuetext` attributes; section titles use `<h2>`; keyboard-navigable font download links
-- Font download links for OpenDyslexic, Atkinson Hyperlegible, and Lexie Readable — open in the system browser via `vscode.env.openExternal`
-
-#### Onboarding (Setup Wizard)
-
-- Rainbow indents step — asked after rainbow brackets is enabled; lets users opt in to coloured indent guides during setup
-- Font choice step — pick from OpenDyslexic, Atkinson Hyperlegible, Lexie Readable, or Default during setup
-- Final activation step — choose whether to activate Dath immediately or save settings for later, with a status bar notification either way
-
-#### Core
-
-- Keyboard shortcut `Ctrl+Alt+D` / `Cmd+Alt+D` to open the panel
-- Status bar degraded indicator — shows a warning icon when the theme file cannot be read and Dath is running in manual fallback mode
-- Theme file include-chain cycle detection — `parseThemeFile` now tracks visited paths to prevent infinite loops when theme files contain circular `include` references

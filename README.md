@@ -1,6 +1,9 @@
 # dath
 
-![dath](resources/dath-logo.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="resources/dath-logo2-dark.png">
+  <img src="resources/dath-logo2.png" alt="dath" height="70">
+</picture>
 
 ## Color & Visual Comfort for VS Code
 
@@ -112,6 +115,12 @@ Dath manages 185 workbench colour tokens spanning the editor, sidebar, tabs, ter
 2. The setup wizard runs automatically on first install — choose your CVD type, contrast preference, and bracket options
 3. Click the `$(eye) Dath` item in the status bar to open the panel at any time
 4. Or: **Ctrl+Alt+D** / **Cmd+Alt+D** — or **Ctrl/Cmd+Shift+P** → `Dath: Open Panel`
+
+### VS Code forks
+
+Dath uses only standard VS Code extension APIs and works in any VS Code-compatible editor — Cursor, Windsurf, Gitpod, Project IDX, and others — without any changes.
+
+**VSCodium** users: VSCodium does not use the VS Code Marketplace. Install via the `.vsix` file from the [GitHub releases page](https://github.com/ryanjames85/dath/releases), or find Dath on [open-vsx.org](https://open-vsx.org) if it has been published there.
 
 ---
 

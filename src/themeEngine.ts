@@ -33,7 +33,6 @@ const MANAGED_TOKENS: string[] = [
   'editor.findMatchHighlightBackground',
   'editor.findRangeHighlightBackground',
   'editor.hoverHighlightBackground',
-  'editor.lineHighlightBackground',
   'editor.rangeHighlightBackground',
   'editor.symbolHighlightBackground',
 
@@ -492,7 +491,8 @@ export class ThemeEngine {
 
     const allManagedKeys = [
       ...MANAGED_TOKENS,
-      // Legacy cleanup — foreground keys no longer written but may exist from older installs
+      // Legacy cleanup — keys no longer written but may exist from older installs
+      'editor.lineHighlightBackground',
       ...Array.from({ length: 6 }, (_, i) => `editorBracketHighlight.foreground${i + 1}`),
       ...Array.from({ length: 6 }, (_, i) => `editorBracketPairGuide.background${i + 1}`),
       ...Array.from({ length: 6 }, (_, i) => `editorBracketPairGuide.activeBackground${i + 1}`),
